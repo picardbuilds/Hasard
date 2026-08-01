@@ -1,0 +1,28 @@
+# Unreal build output
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+
+# IDE
+.vs/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.xcodeproj/
+*.xcworkspace/
+UpgradeLog.htm
+
+# Compiled binaries
+*.dll
+*.exe
+*.lib
+*.o
+*.obj
+*.pdb
+
+# OS
+.DS_Store
+Thumbs.db
