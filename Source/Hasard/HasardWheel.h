@@ -30,6 +30,13 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
 	TObjectPtr<UStaticMeshComponent> BallMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")
+	int32 PocketCount = 37;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")
+	float SpinDuration = 6.0f;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
