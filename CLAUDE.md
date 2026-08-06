@@ -60,6 +60,34 @@ launcher can open directly.
 | `Source/*.Target.cs` | Build targets (game, editor) |
 | `Config/` | `DefaultEngine.ini`, `DefaultGame.ini`, `DefaultInput.ini`, `DefaultEditor.ini` |
 | `Content/` | Assets. Empty as of 2026-07-31 - see decision log |
+| `docs/` | Handoff note and the two learning guides - see Learning guides below |
+
+## Learning guides
+
+Two self-contained HTML courses live in `docs/`. No build step, no dependencies -
+open them in a browser.
+
+| File | What it is |
+|---|---|
+| `docs/guide-1-unreal-cpp-foundations.html` | Unreal C++ concepts, adapted from Tom Looman's Complete Guide. Pointers, reflection, interfaces, delegates, containers, GC. **Reference - complete.** |
+| `docs/guide-2-building-hasard.html` | The build-along course that produces **this project**. 15 modules, each ending in a Build step with real code for this repo. **Active.** |
+
+**Guide 2 is the project plan.** Its Build steps are the intended build order, and
+each one ends with a commit message. If you are picking up work on this repo,
+read the module after the last one in the commit history and continue from there.
+
+Progress as of 2026-08-06: **Modules 0-3 complete** - wheel actor with component
+hierarchy, exposed tuning properties, GameMode/PlayerController/PlayerState with
+round phases. Module 4 (actor lifecycle, session timer) is next.
+
+Both guides carry corrections found while building. Guide 1's input module is
+explicitly flagged as legacy - use Enhanced Input, per Guide 2 Module 6.
+
+**There is exactly one copy of each guide, and it lives here.** Edit these files
+in place. Do not create `-v2`, `-final`, `-updated` or dated duplicates, and do
+not work on a copy elsewhere and forget to bring it back. When a module surfaces
+something the guide got wrong or left out, fix the guide in this folder and
+commit it alongside the code change that revealed it.
 
 ## Stack
 
@@ -84,7 +112,9 @@ mechanic works, because they are what the mechanic is for.
 - **Running spend is visible in the play space**, not buried in a menu. If the
   player has to go looking for what they have spent, it is hidden.
 - **A session timer with an in-world reality check** - present in the scene the
-  player is actually in, not a notification that can be dismissed unread.
+  player is actually in, not a notification that can be dismissed unread. It is
+  measured on **wall clock**, never world time: a clock that pauses when the game
+  pauses understates the session and is a hidden total by another name.
 - **Leaving is always one clear action away.** No confirmation gauntlet, no
   parting offer, no flow that makes stopping more effort than continuing.
 
@@ -211,3 +241,45 @@ Consequence for an already-open decision: the spin result - predetermined, or
 emergent from real ball physics (open decision 3 in `docs/leftover.md`) - is now
 partly a responsible-gaming question rather than a purely technical one, because
 an honest-odds display is a claim about the distribution.
+
+### 2026-08-06 - Learning guides committed to `docs/`
+Two HTML courses now live in the repo rather than outside it: `guide-1` for
+Unreal C++ concepts, `guide-2` as the build-along that produces this project.
+They are committed here so any session - human or agent - can find the intended
+build order without being told, and so corrections found while building are
+versioned alongside the code that revealed them.
+
+Guide 2's Build steps are the project plan. Each ends with a commit message, so
+the commit history and the guide stay in step: the module to work on next is the
+one after the last module named in the log.
+
+**One copy only.** Both files are edited in place. Versioned duplicates
+(`-v2`, `-final`, dated copies) are the failure mode this decision exists to
+prevent - two diverging guides is worse than no guide, because neither can be
+trusted. They are plain HTML, so they diff as text and are deliberately not
+LFS-tracked.
+
+### 2026-08-06 - Coding conventions written down in `docs/CONVENTIONS.md`
+Naming, `UPROPERTY` specifier choices, header/source split, logging, the
+editor/Visual Studio build cycle, and commit-message limits. Separate from this
+file because this brief is about what the project is and refuses to do;
+CONVENTIONS is about how the code is written. Commit subjects are capped at 50
+characters, bodies at two sentences - anything longer belongs in `docs/`.
+
+### 2026-08-06 - Session clock uses wall time, not world time
+`AHasardPlayerState` measures session length with `FPlatformTime::Seconds()`,
+not `UWorld::GetTimeSeconds()`. World time stops while the game is paused and
+scales with time dilation, so a player who paused for ten minutes would be told
+they had been playing ten minutes less, and the reality check would be pushed
+back by the same amount.
+
+This is the responsible-gaming rule, not a correctness nicety. A clock that
+quietly stops counting understates the cost without ever stating anything false -
+the same shape as a hidden spend total, which the Anti-patterns section already
+prohibits. **Session length is a claim about the player, so no in-game state may
+alter it.**
+
+The distinction is narrow and worth stating: gameplay durations *should* use
+world time. The six-second spin is part of the simulation and should slow down
+when the simulation does. Only the figures reported *to* the player about their
+own behaviour are held to wall clock.

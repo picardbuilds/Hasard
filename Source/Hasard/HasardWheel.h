@@ -37,6 +37,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")
 	float SpinDuration = 6.0f;
 
+	virtual void PostInitializeComponents() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

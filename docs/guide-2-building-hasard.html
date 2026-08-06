@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAME 302 — Building Hasard: a roulette table in Unreal C++</title>
+<style>
+:root{
+  --bg:#0e1117; --panel:#151a23; --panel2:#1b212c; --line:#252c39;
+  --text:#dfe5ee; --dim:#93a0b4; --accent:#5aa9ff; --accent2:#8b7cff;
+  --good:#3ddc97; --bad:#ff6b6b; --warn:#ffc857; --build:#3ddc97; --rg:#ff9ec7;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+a{color:var(--accent)}
+#wrap{display:flex;min-height:100vh}
+#side{width:300px;flex:0 0 300px;background:var(--panel);border-right:1px solid var(--line);
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+#side h1{font-size:15px;margin:0 20px 2px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+#side .sub{font-size:12px;color:var(--dim);margin:0 20px 18px}
+#prog{margin:0 20px 16px;height:6px;background:var(--panel2);border-radius:6px;overflow:hidden}
+#prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+#progtxt{font-size:11px;color:var(--dim);margin:0 20px 14px}
+nav button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--dim);
+  font:inherit;font-size:13.5px;padding:8px 20px;cursor:pointer;border-left:3px solid transparent}
+nav button:hover{color:var(--text);background:var(--panel2)}
+nav button.on{color:var(--text);border-left-color:var(--accent);background:var(--panel2)}
+nav button .n{color:var(--dim);font-family:var(--mono);font-size:11px;margin-right:8px}
+nav button .dot{float:right;color:var(--good);font-size:12px;opacity:0}
+nav button.done .dot{opacity:1}
+nav .grp{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5b6779;margin:18px 20px 6px}
+#main{flex:1;min-width:0;padding:46px 56px 120px;max-width:920px}
+.kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+h2.title{font-size:31px;line-height:1.2;margin:6px 0 6px;letter-spacing:-.01em}
+.lede{color:var(--dim);font-size:15px;margin:0 0 30px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+h3{font-size:19px;margin:34px 0 10px;letter-spacing:-.01em}
+p{margin:0 0 14px}
+ul{margin:0 0 14px;padding-left:22px}li{margin:6px 0}
+code{font-family:var(--mono);font-size:.87em;background:var(--panel2);padding:1px 5px;border-radius:4px;color:#c8d6ea}
+pre{background:#0a0d13;border:1px solid var(--line);border-left:3px solid var(--accent2);
+  padding:14px 16px;border-radius:7px;overflow-x:auto;margin:0 0 16px}
+pre code{background:none;padding:0;font-size:13px;line-height:1.6;color:#cdd8e8}
+.cm{color:#5e6b7f;font-style:italic}
+.kw{color:#c792ea}.ty{color:#82d2ff}.st{color:#c3e88d}.mc{color:#ffcb6b}
+.aside{background:linear-gradient(180deg,#16203055,#151a23);border:1px solid #23324a;border-radius:9px;padding:14px 18px;margin:0 0 18px}
+.aside .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;font-weight:600}
+.aside p:last-child{margin-bottom:0}
+.warn{background:#231c10;border:1px solid #4a3a18;border-radius:9px;padding:14px 18px;margin:0 0 18px}
+.warn .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--warn);margin-bottom:6px;font-weight:600}
+.warn p:last-child{margin-bottom:0}
+.rg{background:#24141d;border:1px solid #572f45;border-radius:9px;padding:14px 18px;margin:0 0 18px}
+.rg .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--rg);margin-bottom:6px;font-weight:600}
+.rg p:last-child{margin-bottom:0}
+.build{background:#0f1f18;border:1px solid #23503c;border-radius:9px;padding:16px 20px;margin:0 0 18px}
+.build .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--build);margin-bottom:8px;font-weight:600}
+.build .file{font-family:var(--mono);font-size:11.5px;color:#7fd4ab;background:#0a1712;border:1px solid #1d4433;
+  padding:3px 9px;border-radius:5px;display:inline-block;margin:0 0 10px}
+.build p:last-child{margin-bottom:0}
+.build pre{border-left-color:var(--build)}
+.srcs{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:13px 18px;margin:0 0 18px}
+.srcs .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:7px;font-weight:600}
+.srcs a{display:block;font-size:14px;margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:14px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--panel2);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.chk{border:1px solid #2c3a52;background:#131a26;border-radius:9px;padding:15px 18px;margin:0 0 18px}
+.chk .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:7px}
+.chk .q{margin:0 0 12px}
+.chk button{background:none;border:1px solid #3a4a66;color:var(--accent);font:inherit;font-size:13px;padding:5px 13px;border-radius:6px;cursor:pointer}
+.chk button:hover{background:#1b2434}
+.chk .ans{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #2c3a52;color:#cbd6e6;font-size:15px}
+.chk.open .ans{display:block}.chk.open button{display:none}
+.quiz{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:24px 26px;margin:36px 0 0}
+.quiz h4{margin:0 0 4px;font-size:17px}
+.quiz .hint{color:var(--dim);font-size:13px;margin:0 0 20px}
+.qi{margin:0 0 22px;padding:0 0 18px;border-bottom:1px solid var(--line)}
+.qi:last-of-type{border-bottom:0}
+.qi .qt{font-weight:600;margin:0 0 11px}
+.qi .qt .num{font-family:var(--mono);color:var(--accent);font-size:13px;margin-right:8px}
+.opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);
+  color:var(--text);font:inherit;font-size:14.5px;padding:10px 14px;border-radius:7px;margin:0 0 8px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:#3e5170}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:#12261f;color:#bff3dc}
+.opt.wrong{border-color:var(--bad);background:#2a1517;color:#ffc9c9}
+.why{display:none;font-size:14px;color:#b9c6d8;background:#101722;border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:7px;padding:11px 14px;margin-top:6px}
+.why.show{display:block}
+.score{margin-top:8px;padding:14px 16px;border-radius:8px;background:var(--panel2);font-size:14.5px;display:none}
+.score.show{display:block}
+.pager{display:flex;justify-content:space-between;gap:14px;margin-top:48px;padding-top:26px;border-top:1px solid var(--line)}
+.pager button{background:var(--panel2);border:1px solid var(--line);color:var(--text);font:inherit;font-size:14px;padding:11px 20px;border-radius:8px;cursor:pointer}
+.pager button:hover{border-color:var(--accent);color:var(--accent)}
+.pager button:disabled{opacity:.3;cursor:default}
+.pager button.primary{background:var(--accent);color:#08111e;border-color:var(--accent);font-weight:600}
+@media(max-width:900px){#wrap{flex-direction:column}#side{width:100%;flex:none;height:auto;position:static}#main{padding:28px 20px 80px}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <aside id="side">
+    <h1>GAME 302</h1>
+    <p class="sub">Building <b>Hasard</b> — a roulette table in Unreal C++<br>curated from Epic's 5.8 documentation</p>
+    <div id="prog"><i></i></div>
+    <p id="progtxt">0 of 0 modules complete</p>
+    <nav id="nav"></nav>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+const COURSE = [
+
+/* ---------------------------------------------------------- 0 */
+{
+grp:"Orientation",
+title:"What We Are Building",
+lede:"A European roulette table you can bet on, spin, and get paid out from — with responsible-gaming mechanics built into the design rather than bolted on. Packaged by the end.",
+blocks:[
+{t:'h',x:'The finished thing'},
+{t:'p',x:'Fourteen modules, each ending in a green <b>Build</b> block containing real code for <code>C:\\UE5\\Hasard</code>. By Module 13 you will have:'},
+{t:'list',x:[
+'A wheel that spins and reports which pocket the ball settled in',
+'A felt layout whose bet squares you can look at and click',
+'A bankroll that tracks stakes and pays out from a data-driven payout table',
+'A HUD showing your running spend, the session timer, and the true odds of whatever bet you are about to place',
+'A packaged build you can hand to someone']},
+{t:'warn',lab:'Type it, do not paste it',x:'You will be tempted to copy the code blocks. Resist, at least early. Typing forces you through every token — which is exactly where the misreadings surface (<code>HASARD_API</code> is not a class, <code>GENERATED_BODY()</code> is not a function, <code>UFUNCTION</code> decorates the one line below it). Compiler errors from typos are cheap and instructive.'},
+
+{t:'h',x:'The governing principle'},
+{t:'rg',lab:'Responsible gaming',x:'<p>This project exists to demonstrate responsible-gaming design. The roulette table is the vehicle. Every design decision gets checked against one question: <b>does this respect the player, or exploit them?</b></p><p>When those conflict, respecting the player wins, even at the cost of the thing feeling less exciting. That tradeoff <i>is</i> the portfolio piece — a thrilling roulette table demonstrates nothing, because the industry solved that problem exploitatively decades ago.</p>'},
+{t:'p',x:'Concretely, four things get built in rather than added later, and you will meet each one in a specific module:'},
+{t:'table',head:['Mechanic','Where it lands'],rows:[
+['Session timer with an in-world reality check','Module 4 (timers), Module 11 (UI)'],
+['Running spend visible in the play space, not in a menu','Module 10 (bankroll), Module 11 (UI)'],
+['True odds and the house edge shown honestly','Module 12 (payout data asset)'],
+['No near-miss feedback; a loss reads as a loss','Module 8, and enforced throughout']]},
+{t:'chk',q:'Why build the responsible-gaming mechanics in from Module 4 rather than adding them at the end?',a:'Because bolted-on limits are exactly what the industry already does, and it shows. A session timer added in the last week is a dialog box; a session timer designed in from the start shapes the round structure, the UI layout and the pacing. The distinction is visible in the finished thing, and it is the difference between a project that <i>claims</i> a stance and one that <i>demonstrates</i> it.'},
+
+{t:'h',x:'Why European, not American'},
+{t:'p',x:'A European wheel has 37 pockets: 0 through 36. An American wheel adds a second zero, making 38. That single pocket changes everything:'},
+{t:'table',head:['Wheel','Pockets','House edge'],rows:[
+['European (single zero)','37','<b>2.70%</b>'],
+['American (double zero)','38','5.26%']]},
+{t:'p',x:'A straight-up bet pays <b>35 to 1</b> on both wheels. But the true odds against you are 36 to 1 on a European wheel and 37 to 1 on an American one. The house edge is precisely that gap — and on the American wheel it is nearly double.'},
+{t:'rg',lab:'Your first responsible-gaming decision',x:'Choosing the single-zero wheel is not a technical preference, it is an ethical one, and you made it before writing a line of code. Worth saying out loud in a portfolio conversation: the same game, the same code, the same amount of work, and one version takes twice as much money from the player.'},
+
+{t:'h',x:'Project conventions'},
+{t:'table',head:['Thing','Convention','Example'],rows:[
+['Project prefix','<code>Hasard</code>','<code>AHasardWheel</code>, <code>UHasardBankrollComponent</code>'],
+['Class prefix','Standard Unreal (Guide 1, Module 8)','<code>A</code> Actor, <code>U</code> UObject, <code>F</code> struct, <code>E</code> enum'],
+['File name','Class name minus the type prefix','<code>AHasardWheel</code> &rarr; <code>HasardWheel.h</code> / <code>.cpp</code>'],
+['Module API macro','<code>HASARD_API</code>','<code>class HASARD_API AHasardWheel</code>']]},
+
+{t:'h',x:'The compile loop'},
+{t:'table',head:['Method','Use when','Cost'],rows:[
+['<b>Live Coding</b> (Ctrl+Alt+F11 in editor)','Changing function <i>bodies</i> in .cpp','Seconds. Editor stays open.'],
+['<b>Build in Visual Studio</b>','Changing headers, adding members, adding classes','Tens of seconds to minutes. Close the editor first.'],
+['<b>Rebuild</b>','Changing <code>Hasard.Build.cs</code>, or when things get strange','Minutes. Last resort.']]},
+{t:'warn',lab:'Live Coding cannot add members',x:'Live Coding patches function bodies. Add a <code>UPROPERTY</code>, change a class declaration, or add a new class, and it will either fail or — worse — appear to succeed and behave oddly. Rule: <b>touched a header? close the editor and build properly.</b> A large share of "Unreal is broken" moments are this.'},
+{t:'chk',q:'You added <code>UPROPERTY(EditDefaultsOnly) float SpinDuration;</code> to a header. Live Coding or full build?',a:'<b>Full build, editor closed.</b> You changed the class layout and the reflection data. Live Coding only patches function bodies; a new reflected property needs Unreal Header Tool to regenerate code and the editor to reload the class.'},
+
+{t:'h',x:'Building: the three things that trip everyone'},
+{t:'p',x:'<b>1. Build with <code>Ctrl+Shift+B</code>, not the green Play button.</b> The Play arrow is <i>Start Debugging</i> (F5) — it builds <i>and</i> launches the editor with a debugger attached. It works, it is just slower and heavier than you need.'},
+{t:'table',head:['Want','Press'],rows:[
+['Build only','<code>Ctrl+Shift+B</code>'],
+['Build and launch with debugger','<code>F5</code>'],
+['Build and launch without debugger','<code>Ctrl+F5</code>']]},
+{t:'warn',lab:'2. A class compiled while the editor is open is invisible to it',x:'<p>Unreal loads its class list at startup. Compile a new class while the editor is running and the editor will not know it exists — it will not appear in the Blueprint parent-class picker, and you will conclude the build failed when it succeeded.</p><p>Worse, the editor holds a lock on the binaries, so the build may half-apply or fail outright. <b>Close the editor before building. Reopen after.</b> This is the single most confusing failure in early Unreal work, because nothing anywhere reports an error.</p>'},
+{t:'warn',lab:'3. Red squiggles are not compiler errors',x:'<p>Visual Studio\'s IntelliSense does not run Unreal Header Tool, so it cannot resolve <code>GENERATED_BODY()</code>, <code>Super::</code>, or anything else produced by macro expansion. It will report errors on code that compiles perfectly.</p><p><b>Trust the Output window (Sortie) after a build. Ignore the Error List and the squiggles.</b> Chasing IntelliSense in an Unreal project costs days. A successful build ends with something like <code>Build: 1 succeeded, 0 failed</code>.</p>'},
+
+{t:'h',x:'Editor setup, once'},
+{t:'p',x:'Four settings that will otherwise waste an hour each. Do them before Module 1.'},
+{t:'table',head:['Setting','Where','Why'],rows:[
+['<b>Show Engine Content</b>','Content Browser gear, or the gear inside any asset picker','Cube, Sphere, Cylinder live in engine content and are hidden by default. Without this, mesh dropdowns return nothing.'],
+['<b>Show C++ Classes</b>','Content Browser gear','Adds a C++ Classes section, so you can right-click a class and create a Blueprint from it directly. Also the fastest check that the editor has loaded your code.'],
+['<b>A small test level</b>','File &rarr; New Level &rarr; <b>Basic</b>','See below.'],
+['<b>Editor Startup Map</b>','Project Settings &rarr; Maps &amp; Modes','Stops you loading the wrong level on every launch.']]},
+{t:'warn',lab:'Do not build on the landscape template',x:'<p>The default open-world map has 138 actors, terrain streaming, sky, and atmospheric fog. None of it serves a table game, and it makes every Play press slow. You will press Play several hundred times before this project is done.</p><p><b>File &rarr; New Level &rarr; Basic</b> — it comes with a floor, Directional Light, Sky Light, sky and a Player Start already. Save it as <code>L_RouletteTest</code> in <code>Content/Maps/</code>. Choose <i>Basic</i> rather than <i>Empty</i>; Empty is a black void you then furnish by hand, and a Directional Light with no Sky Light makes everything look broken.</p>'},
+{t:'aside',lab:'Naming, while it is cheap',x:'<code>L_RouletteTest</code>, not <code>Casino</code>. What you are making is a blockout that loads in a second so you can iterate — not the casino floor. Name the scratch level for what it is and keep <code>L_Casino</code> free for when there is something to put on it. Unreal\'s convention is a type prefix plus PascalCase, the same family as <code>BP_Wheel</code>, <code>IA_Look</code>, <code>DA_EuropeanPayouts</code>.<br><br>Renaming assets is cheap — right-click &rarr; <b>Rename</b> and Unreal fixes every reference. But do it <b>in the editor, never in Explorer</b>: renaming a <code>.umap</code> on disk breaks every reference and there is no Core Redirect to save you. Afterwards, right-click the folder &rarr; <b>Fix Up Redirectors in Folder</b> to clean up.'},
+
+{t:'h',x:'Includes are part of the step'},
+{t:'p',x:'Every Build step in this course names the <code>#include</code> lines the code needs. If a step shows you code and does not list an include for a type it uses, that is a bug in the guide — not something you are expected to already know.'},
+{t:'p',x:'Unreal builds with <b>IWYU</b> (Include What You Use), so <code>CoreMinimal.h</code> is deliberately thin. It gives you <code>FString</code>, <code>TArray</code>, <code>FVector</code> and the macros, and almost nothing else. Everything engine-side is a separate include.'},
+{t:'table',head:['You wrote','You need','Otherwise'],rows:[
+['<code>GetWorldTimerManager()</code>, <code>SetTimer</code>','<code>TimerManager.h</code>','Incomplete type — the error never says "timer"'],
+['<code>GetWorld()-&gt;</code> anything','<code>Engine/World.h</code>','Incomplete type <code>UWorld</code>'],
+['<code>CreateDefaultSubobject&lt;UStaticMeshComponent&gt;</code>','<code>Components/StaticMeshComponent.h</code>','Incomplete type'],
+['<code>UBoxComponent</code> constructed','<code>Components/BoxComponent.h</code>','Incomplete type'],
+['<code>USpringArmComponent</code>, <code>UCameraComponent</code>','<code>GameFramework/SpringArmComponent.h</code>, <code>Camera/CameraComponent.h</code>','Incomplete type'],
+['<code>BindAction</code>, <code>AddMappingContext</code>','<code>EnhancedInputComponent.h</code>, <code>EnhancedInputSubsystems.h</code>, <code>InputActionValue.h</code>','Undeclared identifier'],
+['<code>CreateWidget</code>, <code>AddToViewport</code>','<code>Blueprint/UserWidget.h</code> <b>and</b> <code>"UMG"</code> in <code>Hasard.Build.cs</code>','Unresolved external symbol at link'],
+['<code>LineTraceSingleByChannel</code>, <code>DrawDebugLine</code>','<code>Engine/World.h</code>, <code>DrawDebugHelpers.h</code>','Undeclared identifier'],
+['<code>UPrimaryDataAsset</code>','<code>Engine/DataAsset.h</code>','Unknown base class']]},
+{t:'warn',lab:'Two different failures, two different fixes',x:'<p>A <b>missing include</b> fails at compile time: incomplete type, undeclared identifier, unknown base class. A <b>missing module</b> in <code>Hasard.Build.cs</code> fails at <b>link</b> time: <i>unresolved external symbol</i>, with the header found and the compiled code absent.</p><p>If the error is an unresolved external and the include is clearly there, stop editing includes and go look at <code>Hasard.Build.cs</code>. This course adds two modules to it: <code>"EnhancedInput"</code> in Module 6 and <code>"UMG"</code> in Module 11.</p>'},
+{t:'aside',lab:'Header thin, source fat',x:'The rule that decides where an include goes: if the header only <i>names</i> a type — a pointer, a reference, a return type — forward declare it. If code <i>touches</i> the type, calling a member or constructing it, that translation unit needs the real include. Headers stay light, compile times stay tolerable, and you avoid circular includes almost for free. Guide 1, Module 4.'},
+{t:'chk',q:'You get <code>unresolved external symbol</code> on <code>CreateWidget</code>, and <code>Blueprint/UserWidget.h</code> is definitely included. What is wrong?',a:'The include is not the problem — the linker found the declaration and could not find the implementation. <code>"UMG"</code> is missing from <code>PublicDependencyModuleNames</code> in <code>Hasard.Build.cs</code>. Add it, and regenerate project files if Visual Studio does not pick the change up.'},
+
+{t:'h',x:'Batch your work, or you will lose hours'},
+{t:'p',x:'Every switch between the editor and Visual Studio costs a close-build-reopen cycle. Doing that four times in one module is several minutes of waiting for no reason. <b>Read the whole Build step before starting</b>, then work in this order:'},
+{t:'table',head:['Phase','Do all of it at once'],rows:[
+['<b>1. Editor</b>','Create every C++ class the module needs via the wizard. They compile as empty stubs.'],
+['<b>2. Close the editor</b>','Non-negotiable — it holds a lock on the binaries.'],
+['<b>3. Visual Studio</b>','Write <i>all</i> the code. Every header and every source file for the module.'],
+['<b>4. Build once</b>','<code>Ctrl+Shift+B</code>. Check the Output window.'],
+['<b>5. Reopen the editor</b>','Blueprints, Project Settings, press Play, verify.']]},
+{t:'p',x:'The Build steps in this course are written in that order. Where one says "log this and press Play", the logging belongs in phase 3 with the rest of the C++, not after the editor work.'},
+
+{t:'h',x:'Viewport navigation'},
+{t:'p',x:'You will misread geometry constantly until these are muscle memory. A flattened cylinder viewed straight down the Z axis looks identical to an unflattened one.'},
+{t:'table',head:['Action','Control'],rows:[
+['Look around','Hold <b>right mouse</b>, drag'],
+['Fly while looking','Right mouse held + <b>WASD</b>'],
+['Orbit the selection','<b>Alt</b> + left-drag'],
+['Frame the selection','Select it, press <b>F</b>']]},
+
+{t:'h',x:'What is deliberately excluded'},
+{t:'p',x:'No multiplayer, no Gameplay Ability System, no AI, no async asset loading. Those are real and worth learning later. Module 14 lists them with entry points. The constraint here is one interesting mechanic, packaged early — and the interesting mechanic is the wheel, the ball, and the pocket.'}
+],
+quiz:[
+{q:'A straight-up bet pays 35:1. On a European wheel the true odds against you are:',
+ opts:['35 to 1','36 to 1','37 to 1','38 to 1'],
+ c:1,why:'37 pockets means 36 losing outcomes to 1 winning one. The house edge is precisely the gap between the 36:1 truth and the 35:1 payout.'},
+{q:'The house edge on a single-zero wheel is:',
+ opts:['2.70%','1.35%','0%','5.26%'],
+ c:0,why:'1/37 = 2.70%. The double-zero American wheel is 5.26% — nearly double, for an identical-looking game.'},
+{q:'You changed only the body of an existing function in a .cpp. Fastest correct action?',
+ opts:['Delete Binaries and Intermediate, then rebuild','Restart the editor','Full rebuild from Visual Studio','Live Coding — it patches function bodies in seconds'],
+ c:3,why:'Bodies are exactly what Live Coding handles. Save the full build for header changes.'},
+{q:'Why does this course build the responsible-gaming mechanics early rather than last?',
+ opts:['They are quicker to implement first','They cannot be added after packaging','Bolted-on limits look bolted-on; designed-in ones shape the round structure and pacing','Unreal requires UI before gameplay'],
+ c:2,why:'The difference between claiming a stance and demonstrating one is visible in the finished artifact.'},
+{q:'You compiled a new C++ class successfully, but it does not appear in the Blueprint parent-class picker. Why?',
+ opts:['The class needs BlueprintType','The editor was open during the build, so it never loaded the new class','The class must be placed in a Public folder','You must restart Windows'],
+ c:1,why:'Unreal loads its class list at startup. Nothing reports an error — which is exactly what makes this confusing. Close the editor, rebuild, reopen.'},
+{q:'Visual Studio shows red squiggles under <code>GENERATED_BODY()</code> and <code>Super::</code>. This means:',
+ opts:['Your includes are wrong','The code will not compile','IntelliSense cannot run Unreal Header Tool, so it misreports macro-generated code','The engine version is mismatched'],
+ c:2,why:'Trust the Output window after a build; ignore the Error List. Chasing IntelliSense in an Unreal project costs days.'},
+{q:'A mesh dropdown returns no results when you search for "Cylinder". Fix:',
+ opts:['Import a cylinder mesh','Add Starter Content — there is no other way','Rebuild the project','Enable Show Engine Content in the picker gear'],
+ c:3,why:'Cube, Sphere and Cylinder live in engine content, hidden by default. Starter Content also works but is far heavier than needed.'}
+]
+},
+
+/* ---------------------------------------------------------- 1 */
+{
+grp:"Part I — Foundations",
+title:"Gameplay Classes: building the wheel",
+lede:"Every gameplay class is a header/source pair with specific boilerplate in a specific order. Your first one is the centrepiece of the whole project.",
+blocks:[
+{t:'h',x:'The anatomy'},
+{t:'p',x:'Epic\'s reference is blunt about the requirements: the generated header must be included, and <code>GENERATED_BODY()</code> must be at the very beginning of the class body.'},
+{t:'code',x:`#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "HasardWheel.generated.h"   // ALWAYS LAST
+
+UCLASS()
+class HASARD_API AHasardWheel : public AActor
+{
+  GENERATED_BODY()      // must be first inside the body
+
+public:
+  AHasardWheel();
+};`},
+{t:'warn',lab:'.generated.h must be the last include',x:'<p>This is not style. Unreal Header Tool generates code that depends on everything above it having been seen already. Put another <code>#include</code> after it and you get errors pointing at the generated file — a file you did not write and cannot fix.</p><p>Memorise the symptom: <b>unexplained errors inside <code>*.generated.h</code> almost always mean an include sits below it.</b></p>'},
+{t:'chk',q:'Why <code>AActor</code> for the wheel rather than <code>ACharacter</code>?',a:'The Actor ladder from Guide 1 Module 8. A wheel needs a transform and a place in the world — that is <code>AActor</code>. It is never possessed by a controller and never walks, so <code>APawn</code> and <code>ACharacter</code> would hand it a movement component, a capsule and possession machinery it will never touch. Pick the lowest rung that gives you what you need.'},
+
+{t:'h',x:'UCLASS specifiers worth knowing now'},
+{t:'table',head:['Specifier','Effect','When'],rows:[
+['<code>Blueprintable</code>','Class can be used as a Blueprint parent','Almost always — it is how you configure meshes and materials without recompiling'],
+['<code>BlueprintType</code>','Class usable as a Blueprint <i>variable type</i>','When Blueprint graphs hold references to it'],
+['<code>Abstract</code>','Cannot be placed in a level directly','Base classes meaningless on their own'],
+['<code>MinimalAPI</code>','Export type info only, not function bodies','Compile-time saving; you met it on interfaces in Guide 1']]},
+{t:'aside',lab:'The default is more restrictive than you expect',x:'<code>NotBlueprintable</code> is the default and it is <b>inherited by subclasses</b>. If you cannot create a Blueprint from your C++ class, this is nearly always why. <code>AActor</code> is already Blueprintable, so classes deriving from it inherit that — which is why the wheel will work without you thinking about it, and your first hand-written <code>UObject</code> subclass will not.'},
+
+{t:'h',x:'The constructor and the CDO'},
+{t:'p',x:'You met the Class Default Object in Guide 1 as something to read from. Here is the other half: <b>your constructor initialises the CDO</b>, and every instance is cloned from it.'},
+{t:'code',x:`AHasardWheel::AHasardWheel()
+{
+  PrimaryActorTick.bCanEverTick = false;   // the wheel does not need every frame yet
+
+  // A plain SceneComponent as root, with both meshes as SIBLINGS.
+  // Components created here become part of the CDO and are cloned
+  // into every instance spawned afterwards.
+  WheelRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WheelRoot"));
+  RootComponent = WheelRoot;
+
+  WheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WheelMesh"));
+  WheelMesh->SetupAttachment(WheelRoot);
+
+  BallMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BallMesh"));
+  BallMesh->SetupAttachment(WheelRoot);
+}`},
+{t:'warn',lab:'Why not attach the ball to the wheel mesh',x:'<p>The obvious shape is <code>RootComponent = WheelMesh</code> with the ball attached to it. It breaks, for two reasons.</p><p><b>Scale propagates to children.</b> The wheel mesh gets scaled to <code>2.0, 2.0, 0.2</code> to flatten it into a disc. A ball attached to it inherits that: its location is multiplied (X 80 becomes 160, outside the rim), and its uniform <code>0.15</code> scale becomes <code>0.3, 0.3, 0.03</code> — a squashed ellipsoid. Non-uniform parent scale distorts every child.</p><p><b>And roulette specifically needs them independent.</b> The ball spins counter to the wheel and settles into a pocket. Parenting it to the wheel\'s rotation is wrong for the mechanic, not just inconvenient.</p><p>A plain <code>USceneComponent</code> root at scale 1 fixes both: siblings inherit nothing from each other, and each rotates independently.</p>'},
+{t:'chk',q:'Why does the actor need a root component at all?',a:'Every Actor\'s transform lives on its root. A freshly created Actor has none until you assign one, and anything you attach must hang off something. Using a plain <code>USceneComponent</code> rather than a mesh gives you an attachment point with no geometry and no scale of its own — moving the actor moves everything, and nothing inherits a distortion.'},
+{t:'chk',q:'You scale a parent component non-uniformly and its child looks wrong. What is happening?',a:'The child inherits the parent\'s scale, applied to both its own scale <i>and</i> its relative location. A child at local X 80 under a parent scaled 2.0 sits at world X 160. This is the single most common transform surprise in Unreal, and the fix is almost always to make the two components siblings under a neutral root rather than parent and child.'},
+
+{t:'h',x:'The numbers, worked out'},
+{t:'p',x:'The engine primitives are all <b>100 units</b> in every dimension, centred on their own origin. Everything else follows from that:'},
+{t:'table',head:['','Base size','Scale','Result'],rows:[
+['<b>Cylinder</b> (wheel)','100 wide, 100 tall','<code>2.0, 2.0, 0.2</code>','Radius <b>100</b>, spans Z <b>&minus;10 to +10</b>. Top surface at <b>Z = 10</b>.'],
+['<b>Sphere</b> (ball)','100 across','<code>0.15</code> uniform','Radius <b>7.5</b>']]},
+{t:'p',x:'So for the ball to rest <i>on</i> the surface rather than sunk into it: <code>10 + 7.5</code> = <b>Z 17.5</b>. And X 85 puts it near the rim with 15 units of margin. Final: <b>Location <code>85, 0, 17.5</code>, Scale <code>0.15</code></b>.'},
+{t:'aside',lab:'Work the arithmetic once, not by dragging',x:'It is tempting to nudge the gizmo until it looks right. Two minutes with the numbers gives you values you can reason about later — and when the wheel scale changes in Module 4, you will know immediately what the ball position should become. Dragged-until-it-looked-right values are unreadable to future-you.'},
+
+{t:'build',title:'Create the wheel',file:'Source/Hasard/HasardWheel.h + .cpp',x:'<p><b>1.</b> Editor: <b>Tools &rarr; New C++ Class</b> &rarr; parent <b>Actor</b> &rarr; name it <code>HasardWheel</code>. Confirm the module dropdown reads <b>Hasard (Runtime)</b> and the path is <code>Source/Hasard/</code>.</p><p><b>2.</b> In the header, forward declare and add three component pointers:</p><pre><code>class USceneComponent;\nclass UStaticMeshComponent;\n\nprotected:\n  UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")\n  TObjectPtr&lt;USceneComponent&gt; WheelRoot;\n\n  UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")\n  TObjectPtr&lt;UStaticMeshComponent&gt; WheelMesh;\n\n  UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")\n  TObjectPtr&lt;UStaticMeshComponent&gt; BallMesh;</code></pre><p><b>3.</b> In the .cpp, add <code>#include "Components/StaticMeshComponent.h"</code> and the constructor body above.</p><p><b>4.</b> <b>Close the editor.</b> Build with <code>Ctrl+Shift+B</code>. Confirm the Output window says succeeded — ignore any red squiggles.</p><p><b>5.</b> Reopen the editor. In the Content Browser, right-click empty space &rarr; <b>Blueprint Class</b> &rarr; expand <b>All Classes</b> at the bottom &rarr; search <code>HasardWheel</code> &rarr; <b>Select</b>. Name it <code>BP_Wheel</code>.<br><i>If HasardWheel does not appear, the editor was open during your build. Close it, rebuild, reopen.</i></p><p><b>6.</b> Open <code>BP_Wheel</code>. Confirm the Components panel shows <code>WheelRoot</code> as root with <code>WheelMesh</code> and <code>BallMesh</code> as <b>siblings beneath it</b> — that hierarchy is your constructor made visible.</p><p><b>7.</b> Select <b>WheelMesh</b> &rarr; Static Mesh &rarr; <code>Cylinder</code>. Scale <code>2.0, 2.0, 0.2</code>.<br>Select <b>BallMesh</b> &rarr; Static Mesh &rarr; <code>Sphere</code>. Location <code>85, 0, 17.5</code>, Scale <code>0.15</code>.</p><p><b>8.</b> <b>Compile</b>, <b>Save</b>, then drag <code>BP_Wheel</code> into <code>L_RouletteTest</code>. Press <b>F</b> to frame it and <b>Alt+drag</b> to orbit — from directly above, a flat disc and a solid cylinder look identical.</p><p><b>9.</b> Commit. This is your first binary asset commit, exercising the Git LFS setup.</p><pre><code>git add -A\ngit commit -m "Add AHasardWheel with scene root and mesh components"</code></pre>'},
+{t:'warn',lab:'It is a grey disc. Stop there.',x:'Nudging primitive placement feels like progress because it is visible and there is always an obvious "better". It is the easiest place in this whole project to lose an hour. The achievement in this module is the C++ — a constructor that builds a component hierarchy, instantiated through a Blueprint. The geometry is a placeholder that real art will replace entirely.'},
+{t:'srcs',x:[['Gameplay Classes','https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-classes-in-unreal-engine'],['Using the C++ Class Wizard','https://dev.epicgames.com/documentation/en-us/unreal-engine/using-the-cplusplus-class-wizard-in-unreal-engine']]}
+],
+quiz:[
+{q:'Where must <code>HasardWheel.generated.h</code> appear?',
+ opts:['Anywhere in the include block','First, before all other includes','Last, after every other include','Inside the class body'],
+ c:2,why:'The generated code assumes everything else has been seen. Errors inside the generated file usually mean something was included below it.'},
+{q:'The wheel derives from AActor rather than ACharacter because:',
+ opts:['Actors compile faster','It needs a transform and a place in the world, and nothing from Pawn or Character','ACharacter cannot hold a static mesh','Only Actors can be placed in a level'],
+ c:1,why:'Pick the lowest rung on the ladder that gives you what you need. A movement component and possession machinery would be pure overhead.'},
+{q:'What does a class constructor primarily initialise?',
+ opts:['The first spawned instance only','The level','The Blueprint asset','The Class Default Object, from which instances are cloned'],
+ c:3,why:'The CDO is the template. Anything set in the constructor propagates to every instance created afterwards.'},
+{q:'Why is world access unsafe in a constructor?',
+ opts:['The CDO is constructed at engine startup, with no level loaded','World access requires a UPROPERTY','GetWorld is deprecated','Constructors run on a background thread'],
+ c:0,why:'No world exists yet at CDO construction time. Anything world-dependent belongs in BeginPlay.'},
+{q:'Your new UObject-derived class cannot be used as a Blueprint parent. Most likely:',
+ opts:['You forgot the HASARD_API macro','It is missing GENERATED_BODY()','The class is Abstract','NotBlueprintable is the default and you did not add Blueprintable'],
+ c:3,why:'The default is NotBlueprintable, and it is inherited. Classes derived from AActor appear to "just work" because their parents already opted in.'},
+{q:'Why attach both meshes to a plain SceneComponent root instead of making WheelMesh the root?',
+ opts:['Scale propagates to children, so flattening the wheel would distort the ball — and roulette needs them to rotate independently anyway','A mesh cannot be a root component','SceneComponents render faster','Blueprint requires a SceneComponent root'],
+ c:0,why:'Both reasons matter. Non-uniform parent scale multiplies a child\'s location and distorts its shape, and the ball must spin counter to the wheel.'},
+{q:'A child component sits at local X 80 under a parent scaled 2.0. Where is it in world space?',
+ opts:['X 80','X 160','X 82','X 40'],
+ c:1,why:'Parent scale multiplies a child\'s relative location as well as its scale. The most common transform surprise in Unreal.'}
+]
+},
+
+/* ---------------------------------------------------------- 2 */
+{
+grp:"Part I — Foundations",
+title:"Reflection: exposing the wheel's numbers",
+lede:"Guide 1 told you UPROPERTY makes things visible to the engine. This is what is actually happening, and which specifiers you will really use.",
+blocks:[
+{t:'h',x:'What Unreal Header Tool does'},
+{t:'p',x:'Before the C++ compiler runs, <b>Unreal Header Tool</b> parses your headers looking for the macros. For every <code>UCLASS</code>, <code>USTRUCT</code>, <code>UENUM</code>, <code>UPROPERTY</code> and <code>UFUNCTION</code> it finds, it generates C++ that registers that type and its members with the engine at runtime.'},
+{t:'aside',lab:'What reflection actually buys',x:'Standard C++ throws away member names at compile time — you cannot ask an object what its fields are called. Unreal needs exactly that to draw a details panel, serialize a level, replicate a variable, expose a function to Blueprint, or garbage collect. Reflection is the layer that gives C++ the introspection those systems require. Every capability you associate with "the Unreal way" traces back to it.'},
+{t:'chk',q:'A member without <code>UPROPERTY()</code> — what does it lose?',a:'Everything reflection provides: details panel visibility, save/load with the level, replication, Blueprint access, and — most dangerously — <b>garbage collection tracking</b>. It becomes a plain C++ variable the engine cannot see, which is how you end up holding a pointer to a collected object.'},
+
+{t:'h',x:'The specifiers you will actually use'},
+{t:'table',head:['Specifier','Meaning'],rows:[
+['<code>EditAnywhere</code>','Editable on class defaults <i>and</i> per placed instance'],
+['<code>EditDefaultsOnly</code>','Editable on class defaults only — not per instance'],
+['<code>EditInstanceOnly</code>','Editable per placed instance only'],
+['<code>VisibleAnywhere</code>','Shown, never editable. The normal choice for components.'],
+['<code>BlueprintReadOnly</code>','Blueprint graphs may read it'],
+['<code>BlueprintReadWrite</code>','Blueprint graphs may read and write it'],
+['<code>Category = "Name"</code>','Groups it in the details panel']]},
+{t:'code',x:`// The wheel's defining constant. 37 pockets = single zero = 2.70% edge.
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")
+int32 PocketCount = 37;
+
+// How long the spin animation runs before the result is revealed
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")
+float SpinDuration = 6.0f;
+
+// Component: visible for inspection, never hand-assigned
+UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
+TObjectPtr<UStaticMeshComponent> WheelMesh;`},
+{t:'warn',lab:'Prefer EditDefaultsOnly for rules',x:'<code>EditAnywhere</code> on <code>PocketCount</code> would let someone place a second wheel in a level and quietly set it to 38. You would then have two wheels in the same game with different house edges, and a bug that reproduces in exactly one level. Rules are not per-instance decorations. Reach for <code>EditDefaultsOnly</code> unless per-instance variation is genuinely the point.'},
+{t:'chk',q:'Why is <code>int32</code> rather than <code>int</code> used for <code>PocketCount</code>?',a:'Plain <code>int</code> changes size across platforms, and a serialized property whose width varies between platforms is a corruption bug waiting to happen. Unreal supplies explicitly sized types — <code>int32</code> is your default integer. Guide 1, Module 9.'},
+
+{t:'h',x:'UFUNCTION, and the one that bites'},
+{t:'warn',lab:'Reference only — do not add these yet',x:'<p>The three functions below are the forms you will meet, shown together so you can compare them. <b>They are not part of this module\'s Build step</b>, which adds two properties and nothing else.</p><p>You could not add them now even if you wanted to: <b>a <code>UFUNCTION</code> declared without a definition fails to link.</b> UHT generates registration code that references the function, so unlike a plain C++ declaration you cannot leave it dangling. They arrive with their bodies in Module 4 (<code>StartSpin</code>) and Module 10 (<code>HandleBallSettled</code>).</p>'},
+{t:'code',x:`// Blueprint can call this
+UFUNCTION(BlueprintCallable, Category = "Hasard|Wheel")
+void StartSpin();
+
+// C++ default, Blueprint may override. Body takes _Implementation.
+UFUNCTION(BlueprintNativeEvent, Category = "Hasard|Wheel")
+void OnSpinStarted();
+
+// Required for delegate binding, even with no Blueprint exposure
+UFUNCTION()
+void HandleBallSettled(int32 PocketNumber);`},
+{t:'p',x:'That third case is the trap. <code>AddDynamic</code> stores the function\'s <b>name as a string</b> and looks it up through reflection at broadcast time. Without <code>UFUNCTION()</code> the name resolves to nothing, the binding silently fails, and the compiler cannot warn you — because the address you handed it was perfectly valid.'},
+{t:'warn',lab:'BlueprintNativeEvent changes the function name you define',x:'The middle example declares <code>OnSpinStarted()</code>, but the body you write in the <code>.cpp</code> must be <code>OnSpinStarted_Implementation()</code>. UHT generates the plain-named version to handle Blueprint dispatch. Define the plain name yourself and you get a duplicate-symbol linker error; define neither and you get an unresolved one. Neither message mentions <code>_Implementation</code>.'},
+
+{t:'build',title:'Expose the wheel\'s rules',file:'Source/Hasard/HasardWheel.h',x:'<p><b>Visual Studio only.</b> No new classes, no editor work until the build.</p> <p><b>1.</b> In <code>HasardWheel.h</code>, under <code>protected:</code>, add:</p> <pre><code>UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")\nint32 PocketCount = 37;\n\nUPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel")\nfloat SpinDuration = 6.0f;</code></pre> <p>Nothing goes in the <code>.cpp</code> — both are declarations with default member initializers, complete in the header.</p> <p><b>2.</b> Save, close the editor, <code>Ctrl+Shift+B</code>. Reopen.</p> <p><b>3.</b> Open <code>BP_Wheel</code>. Both properties should appear under <b>Hasard &rarr; Wheel</b> in the Details panel. The pipe in the category string created that nesting.</p> <p><b>4.</b> <b>The experiment — this is the module.</b> In the header, delete only the <code>UPROPERTY(...)</code> line above <code>PocketCount</code>, leaving <code>int32 PocketCount = 37;</code> intact. Close the editor, rebuild, reopen, and look at <code>BP_Wheel</code> again.</p> <p>The property is gone from the Details panel entirely. The variable still exists and still works from C++ — the engine simply cannot see it. That is what <code>UPROPERTY</code> does, and it is the same registration that grants serialization, replication, Blueprint access and garbage collection tracking.</p> <p><b>5.</b> Put the line back. Rebuild. Confirm it returns.</p> <p><b>6.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Expose wheel tuning properties on AHasardWheel" -m "PocketCount = 37 (European single-zero wheel, 2.70 percent house edge). SpinDuration = 6.0s. Both EditDefaultsOnly: rules of the game, not per-instance settings."</code></pre>'},
+{t:'srcs',x:[['Reflection System','https://dev.epicgames.com/documentation/en-us/unreal-engine/reflection-system-in-unreal-engine'],['Metadata Specifiers','https://dev.epicgames.com/documentation/en-us/unreal-engine/metadata-specifiers-in-unreal-engine']]}
+],
+quiz:[
+{q:'When does Unreal Header Tool run?',
+ opts:['When you open the editor','Only when packaging','At runtime, when the class is first spawned','Before the C++ compiler, parsing your headers'],
+ c:3,why:'It is a pre-compile step generating the registration code that GENERATED_BODY() inserts.'},
+{q:'<code>PocketCount</code> should be EditDefaultsOnly rather than EditAnywhere because:',
+ opts:['int32 cannot be edited per instance','EditAnywhere is deprecated','It is a rule, not a decoration — per-instance editing would allow two wheels with different house edges','Blueprint cannot read EditAnywhere properties'],
+ c:2,why:'Rules of the game are not per-placement settings. That is a bug reproducing in exactly one level.'},
+{q:'You bind a function with AddDynamic and it never fires, but everything compiles. First suspect?',
+ opts:['Missing UFUNCTION() on the bound function','Wrong Category string','The delegate is not BlueprintAssignable','You bound in BeginPlay instead of the constructor'],
+ c:0,why:'Dynamic delegates resolve by name through reflection. No UFUNCTION means no reflected name to find, and the address you passed was valid so the compiler said nothing.'},
+{q:'The most dangerous thing an unmarked member loses is:',
+ opts:['Details panel visibility','Garbage collection tracking','Blueprint access','Category grouping'],
+ c:1,why:'The others are inconveniences. Losing GC tracking means the object can be collected while you still hold the pointer.'},
+{q:'<code>Category = "Hasard|Wheel"</code> produces:',
+ opts:['Two separate top-level categories','A compile error','A category literally named Hasard|Wheel','A Wheel group nested inside a Hasard group'],
+ c:3,why:'The pipe nests categories in the details panel — worth using once you have more than a handful of properties.'}
+]
+},
+
+/* ---------------------------------------------------------- 3 */
+{
+grp:"Part II — The Gameplay Framework",
+title:"The Framework Map: who owns the round",
+lede:"GameMode, GameState, PlayerController, PlayerState, Pawn. Putting code in the wrong one is the most common structural mistake in first projects — and for a casino game the wrong choice loses the player's money.",
+blocks:[
+{t:'h',x:'The cast list'},
+{t:'table',head:['Class','Owns','Lifetime'],rows:[
+['<code>AGameModeBase</code>','The <b>rules</b>. Round flow: betting &rarr; spin &rarr; settle &rarr; payout.','One per level'],
+['<code>AGameStateBase</code>','Game-wide state everyone needs. Current round phase, last winning number.','One per level'],
+['<code>APlayerController</code>','The player\'s <b>intent</b>. Input, camera, UI ownership.','One per player, persists'],
+['<code>APlayerState</code>','Per-player <b>data that outlives the pawn</b>. Bankroll, session totals.','One per player'],
+['<code>APawn</code>','The physical presence at the table.','Can be destroyed and respawned']]},
+{t:'aside',lab:'The question that resolves most placement decisions',x:'<p><b>"Does this survive the pawn being destroyed?"</b></p><p>If yes, it does not belong on the pawn. In a casino game that question has an obvious answer: the player\'s <b>bankroll</b> must survive absolutely everything. Put it on the pawn and any respawn, level transition or camera swap silently resets the player\'s money.</p>'},
+{t:'chk',q:'Where does the bankroll live?',a:'<code>APlayerState</code>. It is per-player data that must outlive the pawn. This is not a style preference — putting money on a destructible actor is how you ship a game that occasionally deletes someone\'s balance.'},
+{t:'chk',q:'Where does "a round is 30 seconds of betting, then the spin" live?',a:'<code>AGameModeBase</code>. It is a <i>rule</i>. The GameMode owns round flow, win/lose conditions, and which pawn and controller classes the game uses.'},
+
+{t:'h',x:'Round flow belongs to the GameMode'},
+{t:'code',x:`UENUM(BlueprintType)
+enum class EHasardRoundPhase : uint8
+{
+  Betting     UMETA(DisplayName = "Betting"),
+  Spinning    UMETA(DisplayName = "Spinning"),
+  Settling    UMETA(DisplayName = "Settling")
+};`},
+{t:'p',x:'The <code>E</code> prefix marks an enum (Guide 1, Module 8). <code>uint8</code> is the required underlying type for a <code>BlueprintType</code> enum. <code>UMETA(DisplayName=...)</code> controls what a designer sees in the editor dropdown.'},
+{t:'code',x:`// HasardGameMode.h
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Round")
+float BettingWindowSeconds = 30.0f;
+
+UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
+void BeginBettingPhase();
+
+UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
+void ResolveRound(int32 WinningPocket);`},
+
+{t:'h',x:'Choosing specifiers: state versus tuning'},
+{t:'p',x:'Those two properties sit next to each other and get different specifiers, for a reason worth stating plainly:'},
+{t:'table',head:['Property','Specifier','Because'],rows:[
+['<code>BettingWindowSeconds</code>','<code>EditDefaultsOnly</code>','A <b>tuning knob</b>. A designer should be able to try 20 seconds without a programmer.'],
+['<code>CurrentPhase</code>','<code>VisibleAnywhere</code>','<b>Runtime state.</b> The GameMode decides it while playing. Setting it in the editor would be meaningless.']]},
+{t:'p',x:'Both are <code>BlueprintReadOnly</code> rather than <code>BlueprintReadWrite</code>. Blueprint needs to <i>read</i> the phase — to show "betting closes in 12s", or grey out the spin button. But changing the phase has consequences: close betting, start the wheel, settle bets. Those must route through a function, or you get a Blueprint somewhere assigning the phase directly and half the round silently never happening.'},
+{t:'aside',lab:'The same shape, three times',x:'This is the encapsulation pattern from Guide 1 Module 4 appearing for the third time. <code>PocketCount</code> is a rule, so it is not per-instance. <code>CurrentPhase</code> has side effects, so it is not writable. In Module 10, <code>Health</code> will be <code>VisibleAnywhere</code> for exactly the same reason. Any value whose change must trigger something cannot be publicly writable — the setter is the only place to hang the event.'},
+{t:'chk',q:'You added the enum and both properties, and nothing went into the <code>.cpp</code>. Is that right?',a:'<b>Yes.</b> Both are declarations with default member initializers, which are complete in the header — the same thing you saw in Module 2. The <code>.cpp</code> gets involved when you add <i>behaviour</i> (a function body) or something needing construction logic. The constructor below is this module\'s first <code>.cpp</code> work.'},
+{t:'warn',lab:'If you make an exposed property private',x:'<code>protected</code> plus <code>BlueprintReadOnly</code> works as written. But a <b>private</b> property exposed to Blueprint is rejected by Unreal Header Tool unless you add <code>meta=(AllowPrivateAccess="true")</code>. That requirement is part of why <code>protected</code> is the usual choice for exposed members in Unreal code.'},
+
+{t:'h',x:'Writing the constructor yourself'},
+{t:'p',x:'The Game Mode Base wizard does <b>not</b> generate a constructor — unlike the Actor wizard, which does. So to set which classes the game uses, you add both halves yourself.'},
+{t:'code',x:`// HasardGameMode.h - declare it, above protected:
+public:
+  AHasardGameMode();`},
+{t:'code',x:`// HasardGameMode.cpp
+#include "HasardGameMode.h"
+#include "HasardPlayerController.h"
+#include "HasardPlayerState.h"
+
+AHasardGameMode::AHasardGameMode()
+{
+  PlayerControllerClass = AHasardPlayerController::StaticClass();
+  PlayerStateClass      = AHasardPlayerState::StaticClass();
+}`},
+{t:'warn',lab:'Those two includes are required',x:'Calling <code>StaticClass()</code> needs the <b>complete definition</b> of each type, not a forward declaration. So they are real <code>#include</code>s — and they go in the <code>.cpp</code>, not the header, because nothing in your header mentions either type. Guide 1 Module 4: forward declare in the header, include in the source. Here there is nothing to forward declare, so the header stays clean entirely.'},
+{t:'chk',q:'<code>PlayerControllerClass = AHasardPlayerController::StaticClass();</code> — what is being assigned?',a:'The <b>class</b>, not an instance. <code>StaticClass()</code> returns a <code>UClass*</code> — the same idea as <code>TSubclassOf</code> from Guide 1 Module 9. The GameMode is naming which class to spawn later, not spawning anything now. Which it could not do anyway: constructors run for the CDO with no world (Module 1).'},
+
+{t:'h',x:'Controller and Pawn: possession'},
+{t:'p',x:'The controller is a non-physical actor. It takes control of a pawn via <code>Possess()</code> and releases with <code>UnPossess()</code>. That separation is what lets identity survive the body.'},
+{t:'code',x:`// From a pawn, reach the controller
+if (APlayerController* PC = Cast<APlayerController>(GetController()))
+{
+}
+
+// From a controller, reach the player state and the money
+if (AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>())
+{
+}`},
+{t:'p',x:'That first cast is Guide 1\'s downcast pattern in its commonest real form — you hold the base <code>AController*</code> and need something only <code>APlayerController</code> declares.'},
+
+{t:'build',title:'Create the framework classes',file:'Source/Hasard/',x:'<p><b>1.</b> New C++ Class &rarr; <b>Game Mode Base</b> &rarr; <code>HasardGameMode</code>.</p><p><b>2.</b> New C++ Class &rarr; <b>Player Controller</b> &rarr; <code>HasardPlayerController</code>.</p><p><b>3.</b> New C++ Class &rarr; <b>Player State</b> &rarr; <code>HasardPlayerState</code>.</p><p><b>4.</b> <b>Header only</b> — in <code>HasardGameMode.h</code>, add the <code>UENUM</code> <i>above</i> the <code>UCLASS</code> and <i>below</i> the <code>.generated.h</code> include, then both properties:</p><pre><code>UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Round")\nEHasardRoundPhase CurrentPhase = EHasardRoundPhase::Betting;\n\nUPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Round")\nfloat BettingWindowSeconds = 30.0f;</code></pre><p><b>5.</b> <b>Declare the constructor</b> in the header — the Game Mode Base wizard does not create one:</p><pre><code>public:\n  AHasardGameMode();</code></pre><p><b>6.</b> <b>Define it in the .cpp</b>, with both includes. Missing these is the most likely error in this module:</p><pre><code>#include "HasardGameMode.h"\n#include "HasardPlayerController.h"\n#include "HasardPlayerState.h"\n\nAHasardGameMode::AHasardGameMode()\n{\n  PlayerControllerClass = AHasardPlayerController::StaticClass();\n  PlayerStateClass      = AHasardPlayerState::StaticClass();\n}</code></pre><p><b>7.</b> Still in Visual Studio — add the <code>BeginPlay</code> override now, so this module needs only one build. Header, under <code>protected:</code>:</p><pre><code>virtual void BeginPlay() override;</code></pre><p>And in the .cpp, with a log category at the top of the file:</p><pre><code>DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);\n\nvoid AHasardGameMode::BeginPlay()\n{\n  Super::BeginPlay();\n\n  UE_LOG(LogHasard, Warning, TEXT("GameMode BeginPlay - phase: %s, window: %.1fs"),\n         *UEnum::GetValueAsString(CurrentPhase), BettingWindowSeconds);\n}</code></pre><p><code>UEnum::GetValueAsString</code> prints <code>EHasardRoundPhase::Betting</code> rather than <code>0</code> — it works on any UENUM precisely because reflection registered the value names in Module 2. The <code>*</code> in front is the FString operator overload from Guide 1 Module 10, not a dereference.</p><p><b>8.</b> Close the editor. <code>Ctrl+Shift+B</code>. Check the Output window. Reopen.</p><p><b>9.</b> Create <code>BP_HasardGameMode</code> from <code>AHasardGameMode</code>. Set it as <b>Default GameMode</b> in <b>Project Settings &rarr; Maps &amp; Modes</b>, and set both map entries to <code>L_RouletteTest</code> while you are there.</p><p><b>10.</b> Press Play and filter the Output Log to <code>LogHasard</code>. If nothing appears, your GameMode is not the one running — a GameMode you created but never set in Project Settings is a <b>silent no-op that looks exactly like broken code</b>.</p><p><b>11.</b> Commit.</p><pre><code>git commit -m "Add GameMode, PlayerController and PlayerState with round phases"</code></pre>'},
+{t:'srcs',x:[['Gameplay Framework','https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-framework-in-unreal-engine'],['Gameplay Framework Quick Reference','https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-framework-quick-reference-in-unreal-engine'],['Game Mode and Game State','https://dev.epicgames.com/documentation/en-us/unreal-engine/game-mode-and-game-state-in-unreal-engine']]}
+],
+quiz:[
+{q:'The player\'s bankroll belongs on:',
+ opts:['The GameMode','The Pawn','The PlayerState','The HUD'],
+ c:2,why:'PlayerState exists for per-player data that must outlive the pawn. Money on a destructible actor is a balance-deleting bug waiting to happen.'},
+{q:'"Betting closes after 30 seconds" belongs in:',
+ opts:['The PlayerController','The GameMode — it is a rule','The Wheel actor','The PlayerState'],
+ c:1,why:'GameMode owns round flow and the rules of play.'},
+{q:'A <code>BlueprintType</code> enum must have which underlying type?',
+ opts:['uint8','int8','No underlying type is required','int32'],
+ c:0,why:'uint8 is required for Blueprint exposure. UMETA(DisplayName) then controls the editor label.'},
+{q:'How does a controller take charge of a pawn?',
+ opts:['Automatically, if classes match','By being spawned at the same location','By casting to it','Via Possess(), and releases with UnPossess()'],
+ c:3,why:'Possession is the explicit mechanism that decouples identity from body.'},
+{q:'A non-physical actor with no presence in the world describes:',
+ opts:['The Controller','The Wheel','The Pawn','The GameState'],
+ c:0,why:'Controllers have no physical manifestation. That is what lets them survive their pawn.'},
+{q:'<code>CurrentPhase</code> is VisibleAnywhere while <code>BettingWindowSeconds</code> is EditDefaultsOnly. Why the difference?',
+ opts:['Enums cannot be edited in the editor','VisibleAnywhere is faster','One is runtime state the GameMode decides; the other is a tuning knob a designer should turn','Only floats support EditDefaultsOnly'],
+ c:2,why:'Editing runtime state in the editor is meaningless. Editing a tuning value is the whole point of exposing it.'},
+{q:'Both properties are BlueprintReadOnly rather than ReadWrite because:',
+ opts:['Blueprint cannot write to enums','ReadWrite is deprecated','Read-only properties replicate better','Changing the phase has side effects that must route through a function'],
+ c:3,why:'Same encapsulation lesson as PocketCount and, later, Health. A value whose change must trigger something cannot be publicly writable.'},
+{q:'The Game Mode Base wizard does not generate a constructor. What do you do?',
+ opts:['Use BeginPlay instead — constructors are optional','Declare it in the header and define it in the .cpp yourself','Add it via the editor','Regenerate project files'],
+ c:1,why:'Both halves, by hand. BeginPlay is too late — PlayerControllerClass must be set before players are spawned.'},
+{q:'Why do the PlayerController and PlayerState includes go in the .cpp rather than the header?',
+ opts:['Nothing in the header mentions those types, so the header needs neither an include nor a forward declaration','Headers cannot include other headers','StaticClass() only works in .cpp files','To avoid circular dependencies with the GameMode'],
+ c:0,why:'Calling StaticClass() needs the complete definition, so a real include — but only where it is called. Guide 1, Module 4.'}
+]
+},
+
+/* ---------------------------------------------------------- 4 */
+{
+grp:"Part II — The Gameplay Framework",
+title:"Actor Lifecycle, and the session timer",
+lede:"Six moments in an actor's life. Almost every 'why is this null?' bug is code running at the wrong one — and one of them is where your first responsible-gaming mechanic goes.",
+blocks:[
+{t:'h',x:'The order'},
+{t:'table',head:['Stage','When','Put here'],rows:[
+['<b>Constructor</b>','CDO at startup, then per instance','Component creation, defaults. <b>No world access.</b>'],
+['<b>OnConstruction</b>','After construction, and on every editor edit','Editor-time procedural setup'],
+['<b>PostInitializeComponents</b>','Components exist and are registered','Component wiring, delegate binding'],
+['<b>BeginPlay</b>','Gameplay starts for this actor','Timers, spawning, world queries, input contexts'],
+['<b>Tick</b>','Every frame','Only what genuinely must run per frame'],
+['<b>EndPlay</b> / <b>Destroyed</b>','Removal or level end','Cleanup, unbinding if needed']]},
+{t:'aside',lab:'The rule that resolves most of it',x:'<b>Constructor = "what am I made of". BeginPlay = "the world exists, go".</b> If the code needs anything outside the actor itself — the world, other actors, the player controller, a timer — it cannot be in the constructor, because the constructor also runs for the Class Default Object at engine startup when none of those exist.'},
+{t:'chk',q:'Why is <code>PostInitializeComponents</code> preferred over the constructor for binding component delegates?',a:'Two reasons. The components exist and are registered by then, whereas in the constructor they are only just being created. And — the Guide 1 reason — constructor bindings get <b>serialized into Blueprint assets</b> and keep firing even after you remove the binding from C++.'},
+
+{t:'h',x:'Timers'},
+{t:'code',x:`// HasardPlayerState.h
+FTimerHandle SessionTimerHandle;    // member, so you can cancel it
+
+// HasardPlayerState.cpp
+#include "Engine/World.h"
+#include "TimerManager.h"           // GetTimerManager() is inline - needs the full type
+
+void AHasardPlayerState::BeginPlay()
+{
+  Super::BeginPlay();
+
+  SessionStartRealTime = FPlatformTime::Seconds();   // wall clock, not world time
+
+  GetWorldTimerManager().SetTimer(
+      SessionTimerHandle, this, &AHasardPlayerState::RealityCheck,
+      RealityCheckIntervalSeconds,   // e.g. 300.0f
+      true);                         // loop
+}`},
+{t:'p',x:'Hold the <code>FTimerHandle</code> as a member — you need it to cancel. And note <code>&amp;AHasardPlayerState::RealityCheck</code>: the address operator from Guide 1, identical in shape to input binding and delegate binding.'},
+{t:'warn',lab:'The include that bites',x:'<p><code>CoreMinimal.h</code> does not pull in <code>TimerManager.h</code>. <code>UWorld::GetTimerManager()</code> is declared <b>inline</b>, so calling it needs the complete <code>FTimerManager</code> type, not a forward declaration. Without the include you get an incomplete-type error that never mentions timers.</p><p><code>GetWorldTimerManager()</code> is the shorter form — <code>AActor</code> provides it, and it needs the same include.</p>'},
+
+{t:'h',x:'Which clock'},
+{t:'p',x:'Unreal gives you three sources of elapsed time, and they disagree the moment anything unusual happens:'},
+{t:'table',head:['Source','Pauses?','Dilates?','Use for'],rows:[
+['<code>GetTimeSeconds()</code>','Yes','Yes','Gameplay durations — a spin, a cooldown'],
+['<code>GetRealTimeSeconds()</code>','No','No','Elapsed since the level began, ignoring pause'],
+['<code>FPlatformTime::Seconds()</code>','No','No','Wall clock, independent of any world']]},
+{t:'aside',lab:'Gameplay time and honest time are different questions',x:'A six-second spin should slow down if the game slows down — it is a gameplay duration, so <code>GetTimeSeconds()</code> is right for it. How long the player has been sitting there is not a gameplay duration. It is a fact about a person, and no in-game state may alter it.'},
+{t:'warn',lab:'Store it in a double, and Epic will tell you why',x:'<p><code>FPlatformTime::Seconds()</code> returns a <code>double</code>. Storing it in a <code>float</code> compiles silently and breaks the clock.</p><pre><code>double FWindowsPlatformTime::Seconds()\n{\n  LARGE_INTEGER Cycles;\n  QueryPerformanceCounter(&amp;Cycles);\n  // add big number to make bugs apparent where return value is being passed to float\n  return Cycles.QuadPart * GetSecondsPerCycle() + 16777216.0;\n}</code></pre><p>That comment is Epic\'s, and the constant is 2<sup>24</sup>. A <code>float</code> carries 24 bits of mantissa, so at that magnitude the gap between representable values is exactly <b>one second</b> — your session length quantises to whole seconds straight away and gets coarser as the number grows. The engine adds the offset deliberately so the mistake shows up immediately instead of six months later.</p><p>The <code>static_cast&lt;float&gt;</code> on the way out is fine: by then you are holding a small elapsed value, not a huge absolute stamp.</p>'},
+{t:'chk',q:'Why is <code>GetTimeSeconds()</code> the wrong clock for the session timer, but the right one for the spin?',a:'World time stops on pause and scales with dilation. That is exactly what you want for a spin — it is part of the simulation. For a session length it means a player who pauses for ten minutes is told they have been playing ten minutes less than they have, and the reality check is pushed back by the same amount. The number is not the simulation, it is a claim about the player.'},
+
+{t:'rg',lab:'Responsible gaming — the reality check',x:'<p>A <b>reality check</b> is a periodic, unavoidable interruption telling the player how long they have been playing and how much they have staked. It is standard in regulated markets and it is deliberately inconvenient.</p><p>Three design choices separate a real one from a decorative one: it must <b>interrupt</b> rather than appear in a corner, dismissing it must require a deliberate action rather than a click anywhere, and <b>the number it reports must be true</b>. A clock that quietly stops counting is the same failure as a hidden spend total — it understates the cost without ever stating anything false, which is precisely the shape of omission this project refuses. The timer you start here is the mechanism; Module 11 builds what it shows.</p>'},
+{t:'chk',q:'Why does the session timer start in <code>BeginPlay</code> rather than the constructor?',a:'It needs a world — <code>GetWorld()->GetTimerManager()</code> would be operating on nothing at CDO construction time. More broadly: a session begins when play begins, and the constructor runs at engine startup for a template object that is not playing anything.'},
+
+{t:'h',x:'Tick is not free'},
+{t:'code',x:`AHasardWheel::AHasardWheel()
+{
+  PrimaryActorTick.bCanEverTick = true;   // the wheel does need to spin
+  PrimaryActorTick.TickInterval = 0.0f;   // every frame, while spinning
+}`},
+{t:'warn',lab:'Prefer events and timers over Tick',x:'<p>The wheel genuinely needs Tick while it is spinning — smooth rotation is per-frame work. Almost nothing else in this project does. Checking "has the ball stopped yet" every frame is 60 checks per second to detect one event; a delegate fires once, when it happens.</p><p>Before writing anything in <code>Tick</code>, ask whether a delegate, an overlap event, or a timer would do.</p>'},
+
+{t:'build',title:'Observe the lifecycle, then start the session clock',file:'HasardWheel + HasardPlayerState',x:'<p><b>Phase 1 &mdash; Visual Studio.</b> No new classes needed; both already exist.</p> <p><b>1.</b> <code>HasardWheel.h</code>, under <code>protected:</code>, add two more overrides beside the existing <code>BeginPlay</code>:</p> <pre><code>virtual void PostInitializeComponents() override;\nvirtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;</code></pre> <p><b>2.</b> <code>HasardWheel.cpp</code> &mdash; add a log category at the top, then the three bodies. <b>Call <code>Super::</code> first in every one.</b></p> <pre><code>DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);\n\nvoid AHasardWheel::PostInitializeComponents()\n{\n  Super::PostInitializeComponents();\n  UE_LOG(LogHasard, Warning, TEXT("Wheel: PostInitializeComponents"));\n}\n\nvoid AHasardWheel::BeginPlay()\n{\n  Super::BeginPlay();\n  UE_LOG(LogHasard, Warning, TEXT("Wheel: BeginPlay"));\n}\n\nvoid AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)\n{\n  UE_LOG(LogHasard, Warning, TEXT("Wheel: EndPlay"));\n  Super::EndPlay(EndPlayReason);\n}</code></pre> <p><b>3.</b> Add one line to the constructor so you can see it fire:</p> <pre><code>UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor"));</code></pre> <p><b>4.</b> <code>HasardPlayerState.h</code> &mdash; add the timer members and functions:</p> <pre><code>public:\n  /** Real seconds elapsed this session. Unaffected by pause or time dilation. */\n  UFUNCTION(BlueprintPure, Category = "Hasard|Session")\n  float GetSessionElapsedSeconds() const;\n\nprotected:\n  virtual void BeginPlay() override;\n  virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;\n\n  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Session")\n  float RealityCheckIntervalSeconds = 15.0f;\n\n  /** Wall clock at session start. Deliberately not world time - see "Which clock" above. */\n  double SessionStartRealTime = 0.0;\n\n  FTimerHandle SessionTimerHandle;\n\n  void RealityCheck();</code></pre> <p>Note <code>SessionTimerHandle</code> has no <code>UPROPERTY</code> — <code>FTimerHandle</code> is a plain struct, not a UObject, so there is nothing for the garbage collector to track. <code>SessionStartRealTime</code> has none either: it is bookkeeping, and the thing Blueprint should ask for is the elapsed value from <code>GetSessionElapsedSeconds()</code>, not the raw start stamp.</p> <p><b>5.</b> <code>HasardPlayerState.cpp</code>:</p> <pre><code>#include "Engine/World.h"\n#include "TimerManager.h"\n\nDEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);\n\nvoid AHasardPlayerState::BeginPlay()\n{\n  Super::BeginPlay();\n\n  SessionStartRealTime = FPlatformTime::Seconds();\n\n  GetWorldTimerManager().SetTimer(\n      SessionTimerHandle, this, &amp;AHasardPlayerState::RealityCheck,\n      RealityCheckIntervalSeconds,\n      true);   // loop\n}\n\nvoid AHasardPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)\n{\n  GetWorldTimerManager().ClearTimer(SessionTimerHandle);\n  Super::EndPlay(EndPlayReason);\n}\n\nfloat AHasardPlayerState::GetSessionElapsedSeconds() const\n{\n  return static_cast&lt;float&gt;(FPlatformTime::Seconds() - SessionStartRealTime);\n}\n\nvoid AHasardPlayerState::RealityCheck()\n{\n  UE_LOG(LogHasard, Warning, TEXT("REALITY CHECK - %.0f seconds this session"),\n         GetSessionElapsedSeconds());\n}</code></pre> <p>The handle exists so you can cancel — <code>EndPlay</code> is where you use it. Clearing before <code>Super::</code> follows the teardown rule: outward on the way up, inward on the way down.</p> <p><b>Phase 2 &mdash; build.</b></p> <p><b>6.</b> Save all, close the editor, <code>Ctrl+Shift+B</code>, reopen.</p> <p><b>Phase 3 &mdash; observe.</b></p> <p><b>7.</b> Open the Output Log and filter to <code>LogHasard</code>. <b>The constructor line is already there, before you pressed Play.</b> That is the Class Default Object, constructed at editor startup. It is the concrete reason world access in a constructor is illegal.</p> <p><b>8.</b> Press Play. Watch the order: <code>Constructor</code> (for the instance) &rarr; <code>PostInitializeComponents</code> &rarr; <code>BeginPlay</code>. Wait 15 seconds for the reality check. Press Stop and watch <code>EndPlay</code>.</p> <p><b>9.</b> Prove the clock. Press Play, wait for one reality check, then hit <b>Pause</b> in the editor toolbar for about 20 seconds and resume. The next reported figure includes the paused time. Swap <code>FPlatformTime::Seconds()</code> for <code>GetWorld()-&gt;GetTimeSeconds()</code>, rebuild, repeat, and watch the same 20 seconds vanish. That gap is the bug this module exists to avoid.</p> <p><b>10.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Log actor lifecycle; start session timer on PlayerState" -m "Session clock uses wall time, not world time: pause and dilation must not understate how long the player has been playing."</code></pre>'},
+{t:'srcs',x:[['Gameplay Timers','https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-timers-in-unreal-engine'],['Using Timers','https://dev.epicgames.com/documentation/en-us/unreal-engine/using-timers-in-unreal-engine']]}
+],
+quiz:[
+{q:'The right home for starting the session timer is:',
+ opts:['EndPlay','OnConstruction','The constructor','BeginPlay'],
+ c:3,why:'Timers need a world. BeginPlay is the first point at which the world reliably exists for that actor.'},
+{q:'Why does the constructor log appear before you press Play?',
+ opts:['The editor pre-spawns one instance','The Class Default Object is constructed at class load time','Live Coding runs it early','It is a logging bug'],
+ c:1,why:'The CDO runs your constructor at startup. This is the concrete demonstration of why constructors cannot touch the world.'},
+{q:'The FTimerHandle is stored as a member because:',
+ opts:['Without it you have no way to cancel or query the timer','The timer manager requires it','It must be replicated','Otherwise the timer never starts'],
+ c:0,why:'The handle is your only reference for ClearTimer or querying remaining time.'},
+{q:'What makes a reality check meaningful rather than decorative?',
+ opts:['Bright colours','It logs to file','It interrupts, and dismissing it requires a deliberate action','It appears only after a big loss'],
+ c:2,why:'A corner notification that clears on any click is a compliance checkbox. Interruption plus deliberate dismissal is the mechanic actually doing something.'},
+{q:'The session clock uses FPlatformTime::Seconds() rather than GetTimeSeconds() because:',
+ opts:['It is faster','World time stops on pause and scales with dilation','Doubles are more precise than floats','GetTimeSeconds() is deprecated'],
+ c:1,why:'A player who pauses for ten minutes would be told they had played ten minutes less, and the next check would be pushed back by the same amount. The spin still uses world time — it is a gameplay duration. Session length is a claim about the player, so no in-game state may alter it.'},
+{q:'Why does HasardPlayerState.cpp need #include "TimerManager.h"?',
+ opts:['GetTimerManager() is inline and needs the complete FTimerManager type','FTimerHandle is declared there','CoreMinimal.h was removed in UE5','To register the timer with reflection'],
+ c:0,why:'FTimerHandle arrives transitively through EngineTypes.h, so the header compiles. The call site is what fails, with an incomplete-type error that never mentions timers.'}
+]
+},
+
+/* ---------------------------------------------------------- 5 */
+{
+grp:"Part II — The Gameplay Framework",
+title:"A camera at the table",
+lede:"No walking character, no jump. A pawn that sits at the table and looks around it — which is both the right design and considerably less code.",
+blocks:[
+{t:'h',x:'Why a Pawn, not a Character'},
+{t:'p',x:'The Actor ladder again. <code>ACharacter</code> gives you a capsule, a skeletal mesh and a <code>CharacterMovementComponent</code> tuned for walking, jumping and crouching. A player standing at a roulette table does none of those things.'},
+{t:'table',head:['Base','Gives you','Right for'],rows:[
+['<code>AActor</code>','Transform, spawn, tick','The wheel, the table, bet spots'],
+['<code>APawn</code>','All of the above, plus possession and input','<b>The player at the table</b>'],
+['<code>ACharacter</code>','All of the above, plus capsule, mesh, walking','A player walking a casino floor — later, if VR']]},
+{t:'aside',lab:'A decision you can defend',x:'"I used a Pawn rather than a Character because the player never locomotes" is exactly the kind of small, correct scoping choice that reads well in a portfolio review. Reaching for <code>ACharacter</code> by reflex — because every tutorial does — and carrying an unused movement component is the opposite signal.'},
+
+{t:'h',x:'The camera rig'},
+{t:'code',x:`// HasardPlayerPawn.h
+class USpringArmComponent;    // forward declare - Guide 1, Module 4
+class UCameraComponent;
+
+UCLASS()
+class HASARD_API AHasardPlayerPawn : public APawn
+{
+  GENERATED_BODY()
+
+public:
+  AHasardPlayerPawn();
+
+protected:
+  UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
+  TObjectPtr<USceneComponent> ViewRoot;
+
+  UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
+  TObjectPtr<USpringArmComponent> CameraBoom;
+
+  UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
+  TObjectPtr<UCameraComponent> TableCamera;
+};`},
+{t:'code',x:`// HasardPlayerPawn.cpp - the real includes go HERE
+#include "HasardPlayerPawn.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
+
+AHasardPlayerPawn::AHasardPlayerPawn()
+{
+  PrimaryActorTick.bCanEverTick = false;
+
+  ViewRoot = CreateDefaultSubobject<USceneComponent>(TEXT("ViewRoot"));
+  RootComponent = ViewRoot;
+
+  CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+  CameraBoom->SetupAttachment(ViewRoot);
+  CameraBoom->TargetArmLength = 250.0f;
+  CameraBoom->bUsePawnControlRotation = true;   // the arm follows the mouse
+  CameraBoom->bDoCollisionTest = false;         // no walls to push through
+
+  TableCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TableCamera"));
+  TableCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+  TableCamera->bUsePawnControlRotation = false; // the camera rides the arm
+}`},
+{t:'aside',lab:'Forward declare in the header, include in the source',x:'The header only declares <i>pointers</i>, so a forward declaration suffices. The .cpp calls <code>SetupAttachment</code> and sets <code>TargetArmLength</code>, so it needs the full definitions. Guide 1 Module 4 in production form — and it is why UE codebases compile as fast as they do.'},
+{t:'chk',q:'Why <code>bUsePawnControlRotation</code> true on the boom but false on the camera?',a:'Only one thing should respond to mouse input, or you get double rotation. The <b>boom</b> rotates with the controller, swinging around the view root. The <b>camera</b> is rigidly attached to the end of the arm and inherits that rotation. Setting it on both makes the camera rotate relative to an already-rotating arm.'},
+{t:'chk',q:'Why <code>bDoCollisionTest = false</code> here, when a third-person game would leave it on?',a:'Collision testing exists to pull the camera in when a wall comes between it and the character. At a fixed table there is nothing to collide with, and leaving it on means the camera can jitter against the table mesh itself. Turning it off is the correct call <i>for this situation</i> — which is the point: the defaults are tuned for walking games.'},
+
+{t:'build',title:'Put a camera at the table',file:'Source/Hasard/HasardPlayerPawn.*',x:'<p><b>Phase 1 &mdash; editor.</b></p> <p><b>1.</b> <b>Tools &rarr; New C++ Class</b> &rarr; parent <b>Pawn</b> &rarr; name it <code>HasardPlayerPawn</code>. Confirm module <b>Hasard (Runtime)</b>. Then close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>2.</b> <code>HasardPlayerPawn.h</code> — forward declarations above <code>UCLASS()</code>, properties under <code>protected:</code>:</p> <pre><code>class USpringArmComponent;\nclass UCameraComponent;</code></pre> <pre><code>UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")\nTObjectPtr&lt;USceneComponent&gt; ViewRoot;\n\nUPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")\nTObjectPtr&lt;USpringArmComponent&gt; CameraBoom;\n\nUPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")\nTObjectPtr&lt;UCameraComponent&gt; TableCamera;</code></pre> <p><b>3.</b> <code>HasardPlayerPawn.cpp</code> — includes first, then the constructor body from the lecture above.</p> <pre><code>#include "HasardPlayerPawn.h"\n#include "GameFramework/SpringArmComponent.h"\n#include "Camera/CameraComponent.h"</code></pre> <p>The header forward declares both types because it only names them. The <code>.cpp</code> calls <code>SetupAttachment</code> and sets <code>TargetArmLength</code>, so it needs the complete definitions.</p> <p><b>Phase 3 &mdash; build.</b></p> <p><b>4.</b> <code>Ctrl+Shift+B</code>. Check the Output window. Reopen the editor.</p> <p><b>Phase 4 &mdash; wire it up.</b></p> <p><b>5.</b> Create <code>BP_PlayerPawn</code> from <code>AHasardPlayerPawn</code>.</p> <p><b>6.</b> Open <code>BP_HasardGameMode</code> &rarr; set <b>Default Pawn Class</b> to <code>BP_PlayerPawn</code>. Compile, Save.</p> <p><b>7.</b> In <code>L_RouletteTest</code>, place a <b>Player Start</b> about 250 units from <code>BP_Wheel</code>, rotated to face it. Add it from the toolbar <b>Add</b> button &rarr; <b>Basic &rarr; Player Start</b>.</p> <p><b>8.</b> Press Play. You should be looking at the wheel. Mouse does nothing yet — input is Module 6.</p> <p><b>9.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Add AHasardPlayerPawn with spring arm and table camera" -m "Pawn rather than Character: the player never locomotes, so the capsule and movement component would be unused overhead."</code></pre>'},
+{t:'srcs',x:[['Parrot: Pawn, Player Controller and Character Movement','https://dev.epicgames.com/documentation/en-us/unreal-engine/parrot-pawn-player-controller-and-character-movement-in-unreal-engine'],['Components','https://dev.epicgames.com/documentation/en-us/unreal-engine/components-in-unreal-engine']]}
+],
+quiz:[
+{q:'The player at the table should derive from:',
+ opts:['APawn — possession and input, without walking machinery','AActor, since it never moves','ACharacter, for the movement component','AHUD'],
+ c:0,why:'It must be possessed and receive input, but never locomotes. Character would hand you a capsule and movement component you never touch.'},
+{q:'<code>bUsePawnControlRotation</code> should be true on:',
+ opts:['Both the boom and the camera','The camera only','Neither','The spring arm only'],
+ c:3,why:'The arm rotates with the controller; the camera rides the arm. Setting both double-applies the rotation.'},
+{q:'Why disable <code>bDoCollisionTest</code> on the boom here?',
+ opts:['It improves frame rate significantly','Spring arms do not support it','There is nothing to collide with, and it can jitter the camera against the table','It is required for Enhanced Input'],
+ c:2,why:'The feature exists to pull the camera past walls in a walking game. At a fixed table it is a source of jitter, not a benefit.'},
+{q:'Why can the header forward declare USpringArmComponent while the .cpp must include it?',
+ opts:['Forward declarations do not work in .cpp files','Declaring a pointer needs only the type name; calling its members needs the full definition','The header compiles first','It is needed for garbage collection'],
+ c:1,why:'Guide 1, Module 4 — the everyday production form of it.'}
+]
+},
+
+/* ---------------------------------------------------------- 6 */
+{
+grp:"Part III — Playing the Table",
+title:"Enhanced Input",
+lede:"Look around the table, click to place a bet, press a key to spin. UE5's input system — and a correction to Guide 1.",
+blocks:[
+{t:'warn',lab:'Correction to Guide 1',x:'<p>Guide 1 Module 3 showed <code>PlayerInputComponent-&gt;BindAxis("MoveForward", this, &amp;ARogueCharacter::MoveForward);</code>, taken from Looman\'s guide.</p><p>That is the <b>legacy input system</b>. It still functions in 5.8 but is deprecated and is not what templates or Epic\'s docs use. The <i>lesson</i> — the address operator, passing a function to be called later — is unchanged. Only the API moved. Enhanced Input uses the identical <code>&amp;Class::Function</code> shape.</p>'},
+
+{t:'h',x:'The three pieces'},
+{t:'table',head:['Asset / type','Role'],rows:[
+['<b>Input Action</b> (<code>UInputAction</code>)','An abstract verb: "Look", "Place Bet", "Spin". Knows its value type, not its key.'],
+['<b>Input Mapping Context</b> (<code>UInputMappingContext</code>)','Maps physical keys to actions. Layered and swappable at runtime.'],
+['<b>Enhanced Input Component</b>','Binds actions to your C++ functions.']]},
+{t:'rg',lab:'Where contexts earn their keep here',x:'Mapping contexts can be pushed and popped with priorities. That is exactly how the reality-check interruption in Module 11 will work: push a context that suppresses betting input while the check is on screen, pop it when dismissed. Without contexts you would be scattering <code>if (bRealityCheckActive) return;</code> through every input handler — and eventually missing one.'},
+
+{t:'h',x:'Wiring it up'},
+{t:'p',x:'First the module dependency — Guide 1 Module 11 arriving in practice:'},
+{t:'code',x:`// Source/Hasard/Hasard.Build.cs
+PublicDependencyModuleNames.AddRange(new string[] {
+    "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });`},
+{t:'warn',lab:'Editing Hasard.Build.cs requires a full rebuild',x:'Not Live Coding, not an incremental build — close the editor and rebuild. If Visual Studio does not notice, regenerate project files.'},
+{t:'code',x:`// HasardPlayerPawn.h
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
+
+protected:
+  UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+  TObjectPtr<UInputMappingContext> TableMappingContext;
+
+  UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+  TObjectPtr<UInputAction> LookAction;
+
+  UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+  TObjectPtr<UInputAction> PlaceBetAction;
+
+  UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+  TObjectPtr<UInputAction> SpinAction;
+
+  void Look(const FInputActionValue& Value);
+  void PlaceBet();
+  void RequestSpin();
+
+  virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;`},
+{t:'code',x:`// HasardPlayerPawn.cpp
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "InputActionValue.h"
+
+void AHasardPlayerPawn::BeginPlay()
+{
+  Super::BeginPlay();
+
+  if (APlayerController* PC = Cast<APlayerController>(Controller))
+  {
+    if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+        ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+    {
+      Subsystem->AddMappingContext(TableMappingContext, 0);   // 0 = priority
+    }
+  }
+}
+
+void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+  Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+  if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+  {
+    EIC->BindAction(LookAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
+    EIC->BindAction(PlaceBetAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
+    EIC->BindAction(SpinAction,     ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
+  }
+}
+
+void AHasardPlayerPawn::Look(const FInputActionValue& Value)
+{
+  const FVector2D Input = Value.Get<FVector2D>();
+  AddControllerYawInput(Input.X);
+  AddControllerPitchInput(Input.Y);
+}`},
+
+{t:'h',x:'Trigger events'},
+{t:'table',head:['Event','Fires'],rows:[
+['<code>Started</code>','Once, when trigger evaluation begins — the first press'],
+['<code>Ongoing</code>','While evaluation continues but has not succeeded — a hold in progress'],
+['<code>Triggered</code>','All conditions met. With no explicit trigger configured this fires <b>every tick</b> the input is active.'],
+['<code>Completed</code>','Once, when evaluation finishes'],
+['<code>Canceled</code>','The trigger aborted — a hold released before its threshold']]},
+{t:'chk',q:'Why is Look bound to <code>Triggered</code> but Place Bet to <code>Started</code>?',a:'Look is a <b>continuous state</b> — you want it applied every frame the mouse is moving. Placing a bet is an <b>event</b> — it should happen once per click, not sixty times a second while the button is down. Binding Place Bet to <code>Triggered</code> would drain the player\'s bankroll in under a second, which is a very literal demonstration of why this distinction matters here.'},
+
+{t:'build',title:'Look, click, spin',file:'Content/Input/ + HasardPlayerPawn',x:'<p><b>Phase 1 &mdash; editor. Create the input assets first, so they exist to assign later.</b></p> <p><b>1.</b> Content Browser &rarr; new folder <code>Input</code>.</p> <p><b>2.</b> Right-click &rarr; <b>Input &rarr; Input Action</b>, three times:</p> <ul><li><code>IA_Look</code> &mdash; Value Type <b>Axis2D (Vector2D)</b></li><li><code>IA_PlaceBet</code> &mdash; Value Type <b>Digital (bool)</b></li><li><code>IA_Spin</code> &mdash; Value Type <b>Digital (bool)</b></li></ul> <p><b>3.</b> Right-click &rarr; <b>Input &rarr; Input Mapping Context</b> &rarr; <code>IMC_Table</code>. Open it and add three mappings: <b>Mouse XY 2D-Axis</b> &rarr; IA_Look, <b>Left Mouse Button</b> &rarr; IA_PlaceBet, <b>Spacebar</b> &rarr; IA_Spin.</p> <p><b>4.</b> Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>5.</b> <code>Source/Hasard/Hasard.Build.cs</code> &mdash; add <code>"EnhancedInput"</code>:</p> <pre><code>PublicDependencyModuleNames.AddRange(new string[] {\n    "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });</code></pre> <p><b>6.</b> <code>HasardPlayerPawn.h</code> &mdash; the forward declarations, four asset properties, three handlers and the <code>SetupPlayerInputComponent</code> override from the lecture. Also add <code>virtual void BeginPlay() override;</code>.</p> <p><b>7.</b> <code>HasardPlayerPawn.cpp</code> &mdash; includes first:</p> <pre><code>#include "HasardPlayerPawn.h"\n#include "EnhancedInputComponent.h"       // CastChecked&lt;UEnhancedInputComponent&gt;, BindAction\n#include "EnhancedInputSubsystems.h"      // UEnhancedInputLocalPlayerSubsystem\n#include "InputActionValue.h"             // FInputActionValue in the handlers\n#include "InputMappingContext.h"          // AddMappingContext takes the full type\n#include "GameFramework/PlayerController.h"</code></pre> <p>Then <code>BeginPlay</code> with <code>AddMappingContext</code>, <code>SetupPlayerInputComponent</code> with the three <code>BindAction</code> calls, and <code>Look()</code>. Stub the other two:</p> <pre><code>void AHasardPlayerPawn::PlaceBet()\n{\n  UE_LOG(LogHasard, Warning, TEXT("PlaceBet pressed"));\n}\n\nvoid AHasardPlayerPawn::RequestSpin()\n{\n  UE_LOG(LogHasard, Warning, TEXT("Spin requested"));\n}</code></pre> <p><b>Phase 3 &mdash; build.</b></p> <p><b>8.</b> <code>Ctrl+Shift+B</code>. A <code>.Build.cs</code> change sometimes needs project files regenerating — if VS does not pick it up, right-click <code>Hasard.uproject</code> &rarr; Generate Visual Studio project files, then rebuild.</p> <p><b>Phase 4 &mdash; assign and test.</b></p> <p><b>9.</b> Open <code>BP_PlayerPawn</code> and assign all four assets to the properties you exposed. Compile, Save.</p> <p><b>10.</b> Play. Mouse look should work; clicking and spacebar should log.</p> <p><b>11.</b> Commit &mdash; this is the first genuinely interactive state.</p> <pre><code>git add -A\ngit commit -m "Add Enhanced Input: look, place bet, spin" -m "Look binds to Triggered (continuous); PlaceBet and Spin bind to Started (one per press). Binding PlaceBet to Triggered would fire every tick and drain the bankroll instantly."</code></pre>'},
+{t:'srcs',x:[['Enhanced Input','https://dev.epicgames.com/documentation/en-us/unreal-engine/enhanced-input-in-unreal-engine']]}
+],
+quiz:[
+{q:'Guide 1 showed <code>BindAxis</code>. In UE 5.8 that API is:',
+ opts:['Removed entirely','Legacy and deprecated in favour of Enhanced Input','Still the recommended approach','Only for Blueprint'],
+ c:1,why:'It still functions but is not what templates or current docs use. The address-operator lesson carries over unchanged.'},
+{q:'Placing a bet should bind to which trigger event?',
+ opts:['Triggered','Ongoing','Canceled','Started'],
+ c:3,why:'Started fires once per press. Triggered would fire every tick the button is held and empty the bankroll instantly.'},
+{q:'Where should <code>AddMappingContext</code> be called?',
+ opts:['BeginPlay','OnConstruction','The constructor','SetupPlayerInputComponent'],
+ c:0,why:'It needs a valid PlayerController and LocalPlayer, which means a world — so BeginPlay, not the constructor.'},
+{q:'Mapping context priorities will be used in this project to:',
+ opts:['Allow key rebinding','Improve input latency','Suppress betting input while the reality check is on screen','Support gamepads'],
+ c:2,why:'Push a context above the table one; pop it when dismissed. The alternative is scattering guard clauses through every handler and eventually missing one.'},
+{q:'Adding "EnhancedInput" to Hasard.Build.cs requires:',
+ opts:['Restarting Windows','A full rebuild with the editor closed','Live Coding only','Nothing, it hot-reloads'],
+ c:1,why:'Build file changes are the one case where even an incremental build may not suffice — regenerate project files if VS does not pick it up.'}
+]
+},
+
+/* ---------------------------------------------------------- 7 */
+{
+grp:"Part III — Playing the Table",
+title:"Components: the betting system",
+lede:"The most useful structural habit in Unreal. Instead of a deeper class hierarchy, build capabilities you can attach to anything.",
+blocks:[
+{t:'h',x:'The problem components solve'},
+{t:'p',x:'Betting logic could live on the pawn. But then a spectator pawn, an AI player, or a second seat at the table would each need to inherit from your player pawn — which is absurd. Put it in a <b>component</b> and anything that bets attaches one.'},
+{t:'p',x:'Guide 1 raised this at the end of the Interfaces module: interfaces say <i>"you can be asked to do this"</i>, components say <i>"you have this capability, and here is how it works"</i>. This project uses both — a component that places bets, an interface that bet spots implement.'},
+
+{t:'h',x:'Creating an ActorComponent'},
+{t:'code',x:`// HasardBettingComponent.h
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
+#include "HasardBettingComponent.generated.h"
+
+UCLASS(ClassGroup=(Hasard), meta=(BlueprintSpawnableComponent))
+class HASARD_API UHasardBettingComponent : public UActorComponent
+{
+  GENERATED_BODY()
+
+public:
+  UHasardBettingComponent();
+
+  UFUNCTION(BlueprintCallable, Category = "Hasard|Betting")
+  bool PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake);
+
+  UFUNCTION(BlueprintCallable, Category = "Hasard|Betting")
+  void ClearAllBets();
+
+protected:
+  UPROPERTY(EditDefaultsOnly, Category = "Hasard|Betting")
+  int32 ChipDenomination = 5;
+};`},
+{t:'p',x:'Two specifiers earn their place. <code>ClassGroup=(Hasard)</code> groups it in the editor. <code>meta=(BlueprintSpawnableComponent)</code> is the one that matters: <b>without it, designers cannot add your component to a Blueprint actor</b> via Add Component. A frequent and confusing omission.'},
+{t:'chk',q:'Your component compiles but does not appear in the Add Component dropdown. Why?',a:'Missing <code>meta=(BlueprintSpawnableComponent)</code> on the <code>UCLASS</code>. The class exists and is perfectly usable from C++, but the editor will not offer it as something to add to a Blueprint without that metadata.'},
+
+{t:'h',x:'SceneComponent vs ActorComponent'},
+{t:'table',head:['Base','Has a transform?','Use for'],rows:[
+['<code>UActorComponent</code>','No','Pure logic: betting, bankroll, session tracking'],
+['<code>USceneComponent</code>','Yes','Anything needing a position: attachment points, chip stack anchors'],
+['<code>UPrimitiveComponent</code>','Yes, plus rendering and collision','Meshes, collision shapes, the bet-spot volumes']]},
+{t:'p',x:'Choose the lightest that works. A betting component has no position of its own, so <code>UActorComponent</code> is correct. Giving it a transform it never uses is the same category of error as making the wheel an <code>ACharacter</code>.'},
+
+{t:'h',x:'A bet, as data'},
+{t:'code',x:`UENUM(BlueprintType)
+enum class EHasardBetType : uint8
+{
+  StraightUp  UMETA(DisplayName = "Straight Up"),   // 1 number,  pays 35:1
+  Split       UMETA(DisplayName = "Split"),         // 2 numbers, pays 17:1
+  Street      UMETA(DisplayName = "Street"),        // 3 numbers, pays 11:1
+  Corner      UMETA(DisplayName = "Corner"),        // 4 numbers, pays  8:1
+  SixLine     UMETA(DisplayName = "Six Line"),      // 6 numbers, pays  5:1
+  Column      UMETA(DisplayName = "Column"),        // 12 numbers, pays 2:1
+  Dozen       UMETA(DisplayName = "Dozen"),         // 12 numbers, pays 2:1
+  Red         UMETA(DisplayName = "Red"),           // 18 numbers, pays 1:1
+  Black       UMETA(DisplayName = "Black"),
+  Even        UMETA(DisplayName = "Even"),
+  Odd         UMETA(DisplayName = "Odd"),
+  Low         UMETA(DisplayName = "Low 1-18"),
+  High        UMETA(DisplayName = "High 19-36")
+};
+
+USTRUCT(BlueprintType)
+struct FHasardBet
+{
+  GENERATED_BODY()
+
+  UPROPERTY(BlueprintReadOnly, Category = "Bet")
+  EHasardBetType BetType = EHasardBetType::StraightUp;
+
+  UPROPERTY(BlueprintReadOnly, Category = "Bet")
+  int32 PrimaryNumber = 0;
+
+  UPROPERTY(BlueprintReadOnly, Category = "Bet")
+  int32 Stake = 0;
+};`},
+{t:'aside',lab:'Every one of those bets has the same house edge',x:'<p>Straight up pays 35:1 with a 1/37 chance. Red pays 1:1 with an 18/37 chance. Work either through and you get the same expected value: <b>&minus;1/37, or &minus;2.70%</b>. Every bet on the table, without exception.</p><p>That fact is the single most useful thing an honest-odds display can tell a player, because it dissolves the entire premise of "systems" and "better bets". You will surface it in Module 12.</p>'},
+{t:'chk',q:'Why is <code>FHasardBet</code> a <code>USTRUCT</code> rather than a <code>UCLASS</code>?',a:'It is pure data with no behaviour and no identity — a value you copy around, store in arrays, and throw away. That is exactly what structs are for (Guide 1, Module 8: <code>F</code> prefix, value semantics, accessed with <code>.</code>). Making it a UObject would add allocation, garbage collection and reference tracking for no benefit.'},
+
+{t:'build',title:'Create the betting component',file:'Source/Hasard/',x:'<p><b>Phase 1 &mdash; editor.</b></p> <p><b>1.</b> New C++ Class &rarr; <b>Actor Component</b> &rarr; <code>HasardBettingComponent</code>. Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>2.</b> Create a new file <code>Source/Hasard/HasardTypes.h</code> by hand (VS: right-click the Hasard folder &rarr; Add &rarr; New Item &rarr; Header File). It holds the shared enum and struct so the bet spot, the betting component and the payout table can all use them:</p> <pre><code>#pragma once\n\n#include "CoreMinimal.h"\n#include "HasardTypes.generated.h"</code></pre> <p>Then the <code>UENUM</code> and <code>USTRUCT</code> from the lecture above.</p> <p><b>3.</b> Right-click <code>Hasard.uproject</code> &rarr; <b>Generate Visual Studio project files</b>. A hand-created file will not appear in the solution until you do, and Unreal Header Tool needs to see it to produce <code>HasardTypes.generated.h</code>.</p> <p><b>4.</b> <code>HasardBettingComponent.h</code> &mdash; include the types header, add the <code>UCLASS</code> specifiers and the members:</p> <pre><code>#include "HasardTypes.h"\n#include "HasardBettingComponent.generated.h"\n\nUCLASS(ClassGroup=(Hasard), meta=(BlueprintSpawnableComponent))\nclass HASARD_API UHasardBettingComponent : public UActorComponent</code></pre> <p>plus <code>PlaceBet</code>, <code>ClearAllBets</code> and <code>ChipDenomination</code> as shown in the lecture.</p> <p><b>5.</b> <code>HasardBettingComponent.cpp</code> &mdash; includes, then stub the two functions with logs for now:</p> <pre><code>#include "HasardBettingComponent.h"\n#include "HasardTypes.h"      // EHasardBetType, FHasardBet</code></pre> <pre><code>bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake)\n{\n  UE_LOG(LogHasard, Warning, TEXT("PlaceBet: type %s on %d for %d"),\n         *UEnum::GetValueAsString(BetType), PrimaryNumber, Stake);\n  return true;\n}</code></pre> <p><b>6.</b> <code>HasardPlayerPawn.h</code> &mdash; forward declare and add the component:</p> <pre><code>class UHasardBettingComponent;\n\nUPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")\nTObjectPtr&lt;UHasardBettingComponent&gt; BettingComp;</code></pre> <p><b>7.</b> <code>HasardPlayerPawn.cpp</code> &mdash; include it, create it in the constructor, and call it from the input handler:</p> <pre><code>BettingComp = CreateDefaultSubobject&lt;UHasardBettingComponent&gt;(TEXT("BettingComp"));</code></pre> <pre><code>void AHasardPlayerPawn::PlaceBet()\n{\n  if (BettingComp)\n  {\n    BettingComp-&gt;PlaceBet(EHasardBetType::StraightUp, 17, 5);\n  }\n}</code></pre> <p><b>Phase 3 &mdash; build and test.</b></p> <p><b>8.</b> <code>Ctrl+Shift+B</code>, reopen, Play, click. The log should show a straight-up bet on 17.</p> <p><b>9.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Add betting component and shared Hasard types" -m "EHasardBetType and FHasardBet live in HasardTypes.h so the bet spot, betting component and payout table can share them. Betting is a component so anything that bets can have one, without inheriting from the player pawn."</code></pre>'},
+{t:'srcs',x:[['Components','https://dev.epicgames.com/documentation/en-us/unreal-engine/components-in-unreal-engine']]}
+],
+quiz:[
+{q:'Your component does not appear in the editor Add Component list. Missing:',
+ opts:['GENERATED_BODY()','meta=(BlueprintSpawnableComponent)','Blueprintable','ClassGroup'],
+ c:1,why:'Without that metadata the class is C++-usable but not offered to designers in the editor.'},
+{q:'The betting component should derive from:',
+ opts:['AActor','USceneComponent','UPrimitiveComponent','UActorComponent'],
+ c:3,why:'It has no position of its own, so the lightest base is correct. A transform it never uses is pure overhead.'},
+{q:'<code>FHasardBet</code> is a USTRUCT rather than a UCLASS because:',
+ opts:['Structs are faster to compile','UCLASS cannot be used in a TArray','It is pure data with no identity — a value you copy, store and discard','Blueprint cannot read UCLASS members'],
+ c:2,why:'Value semantics, no allocation, no GC. The F prefix tells you as much at the call site.'},
+{q:'On a European wheel, which bet has the lowest house edge?',
+ opts:['None — every bet has the same 2.70% edge','Straight up, at 35:1','Red or Black, at 1:1','A Dozen, at 2:1'],
+ c:0,why:'Work through the expected value of any of them and you get −1/37. That fact is what dissolves the premise of betting "systems".'},
+{q:'A BlueprintType enum requires which underlying type?',
+ opts:['int32','int8','No underlying type','uint8'],
+ c:3,why:'uint8. UMETA(DisplayName) then controls the label a designer sees.'}
+]
+},
+
+/* ---------------------------------------------------------- 8 */
+{
+grp:"Part III — Playing the Table",
+title:"Collision and tracing: clicking the felt",
+lede:"How to ask the world what the player is looking at. Line traces, channels, and why your trace hits nothing.",
+blocks:[
+{t:'h',x:'Traces versus overlaps'},
+{t:'table',head:['Mechanism','Question','Cost'],rows:[
+['<b>Line trace</b>','What is under my crosshair right now?','Cheap, on demand'],
+['<b>Sweep</b>','What does this shape hit as it moves?','Slightly more, on demand'],
+['<b>Overlap event</b>','Tell me when something enters me','Free until it happens']]},
+{t:'p',x:'Use traces when <i>you</i> ask the question — the player clicks and you need to know which bet square. Use overlap events when the <i>world</i> should tell you.'},
+
+{t:'h',x:'A line trace from the camera'},
+{t:'code',x:`AHasardBetSpot* UHasardInteractionComponent::TraceForBetSpot() const
+{
+  APawn* OwnerPawn = Cast<APawn>(GetOwner());
+  if (!OwnerPawn) return nullptr;
+
+  FVector EyeLocation;
+  FRotator EyeRotation;
+  OwnerPawn->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+
+  const FVector End = EyeLocation + (EyeRotation.Vector() * TraceDistance);
+
+  FCollisionQueryParams Params;
+  Params.AddIgnoredActor(OwnerPawn);      // do not hit yourself
+
+  FHitResult Hit;
+  const bool bHit = GetWorld()->LineTraceSingleByChannel(
+      Hit, EyeLocation, End, ECC_Visibility, Params);
+
+  DrawDebugLine(GetWorld(), EyeLocation, End,
+      bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.5f);
+
+  return bHit ? Cast<AHasardBetSpot>(Hit.GetActor()) : nullptr;
+}`},
+{t:'p',x:'Points worth noting: <code>FHitResult</code> is a struct, so you access it with <code>.</code> (Guide 1, Module 2). <code>AddIgnoredActor</code> saves you from hitting your own pawn at distance zero. And the <code>Cast</code> returning null for a non-bet-spot is Guide 1 Module 5 — safe, checked, no crash.'},
+
+{t:'h',x:'Collision channels'},
+{t:'p',x:'Every trace runs against a <b>channel</b>, and every component decides per channel whether it blocks, overlaps or ignores.'},
+{t:'warn',lab:'Why your trace hits nothing',x:'<p>Three causes, in order of frequency:</p><p><b>1.</b> The target\'s collision preset ignores your channel. Check the component\'s <b>Collision Presets</b> — <code>NoCollision</code> and <code>OverlapAll</code> will not produce a blocking hit.<br><b>2.</b> You traced from inside your own pawn and hit yourself. Add <code>AddIgnoredActor</code>.<br><b>3.</b> Start and end are the same point, usually from a zero-length direction vector.</p>'},
+{t:'chk',q:'Your trace never reports a hit on the bet spot you placed. First thing to check?',a:'The collision preset on its mesh or box component. Many meshes default to <code>NoCollision</code> or <code>OverlapAll</code>, neither of which blocks a <code>Visibility</code> trace. Set it to <code>BlockAll</code> (or a custom preset that blocks Visibility) and trace again.'},
+
+{t:'h',x:'The interface, put to work'},
+{t:'p',x:'A bet spot on the felt and the wheel itself both respond to being clicked, but differently. That is exactly the interface case from Guide 1 Module 6.'},
+{t:'code',x:`// Check - uses the U-prefixed class
+if (HitActor->Implements<UHasardInteractable>())
+{
+  // Call - uses the I-prefixed class, Execute_ prefix, target as first arg
+  IHasardInteractable::Execute_OnPlayerInteract(HitActor, OwnerPawn);
+}`},
+{t:'p',x:'<code>Implements&lt;T&gt;()</code> returns a <b>bool</b> — it is a question, not a cast. <code>Execute_</code> is a static function generated by <code>GENERATED_BODY()</code>, which is why the target is passed as an argument rather than used with <code>-&gt;</code>.'},
+{t:'rg',lab:'No near-miss, starting here',x:'<p>When the ball settles, a bet spot one pocket away from the winner gets <b>no special treatment</b>. No highlight, no "so close", no sound. It is a loss and it reads as a loss.</p><p>This is the easiest place in the whole project to accidentally build a dark pattern, because highlighting adjacent numbers feels like helpful feedback. It is not — it is the single most studied manipulative mechanic in gambling design.</p>'},
+
+{t:'build',title:'Make the felt clickable',file:'Source/Hasard/',x:'<p><b>Phase 1 &mdash; editor. Create all three classes before closing.</b></p> <p><b>1.</b> New C++ Class &rarr; <b>All Classes</b> &rarr; search <b>Unreal Interface</b> &rarr; name it <code>HasardInteractable</code>.</p> <p><b>2.</b> New C++ Class &rarr; <b>Actor</b> &rarr; <code>HasardBetSpot</code>.</p> <p><b>3.</b> New C++ Class &rarr; <b>Actor Component</b> &rarr; <code>HasardInteractionComponent</code>. Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>4.</b> <code>HasardInteractable.h</code> &mdash; add one function to the <b>I-prefixed</b> class:</p> <pre><code>UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Hasard|Interaction")\nvoid OnPlayerInteract(APawn* InstigatorPawn);</code></pre> <p>Leave the <code>U</code>-prefixed class exactly as generated.</p> <p><b>5.</b> <code>HasardBetSpot.h</code> &mdash; inherit from both, and add the bet data:</p> <pre><code>class HASARD_API AHasardBetSpot : public AActor, public IHasardInteractable\n{\n  GENERATED_BODY()\n\npublic:\n  AHasardBetSpot();\n\n  virtual void OnPlayerInteract_Implementation(APawn* InstigatorPawn) override;\n\nprotected:\n  UPROPERTY(VisibleAnywhere, Category = "Hasard|BetSpot")\n  TObjectPtr&lt;UBoxComponent&gt; SpotBounds;\n\n  UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Hasard|BetSpot")\n  EHasardBetType BetType = EHasardBetType::StraightUp;\n\n  UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Hasard|BetSpot")\n  int32 PrimaryNumber = 0;\n};</code></pre> <p>Note <code>_Implementation</code> on the override — required by <code>BlueprintNativeEvent</code>. And <code>EditInstanceOnly</code>: this is the one place per-instance editing is correct, since every square on the felt is a different bet.</p> <p><b>6.</b> <code>HasardBetSpot.cpp</code> &mdash; create the box in the constructor, and log in the implementation.</p> <pre><code>#include "HasardBetSpot.h"\n#include "Components/BoxComponent.h"   // CreateDefaultSubobject&lt;UBoxComponent&gt;</code></pre> <p>The header forward declares <code>class UBoxComponent;</code> — it only holds a pointer. The <code>.cpp</code> constructs one, so it needs the definition.</p> <p><b>7.</b> <code>HasardInteractionComponent.h/.cpp</code> &mdash; the trace from the lecture, plus <code>TraceDistance</code> and <code>TraceRadius</code> as <code>EditDefaultsOnly</code> floats.</p> <pre><code>#include "HasardInteractionComponent.h"\n#include "Engine/World.h"         // LineTraceSingleByChannel lives on UWorld\n#include "CollisionQueryParams.h"  // FCollisionQueryParams\n#include "DrawDebugHelpers.h"      // DrawDebugLine\n#include "GameFramework/Pawn.h"    // the instigator you pass along</code></pre> <p><b>8.</b> Add the interaction component to the pawn, and rewrite <code>PlaceBet()</code> to trace, check, and call:</p> <pre><code>void AHasardPlayerPawn::PlaceBet()\n{\n  AActor* Hit = InteractionComp-&gt;TraceForBetSpot();\n  if (Hit &amp;&amp; Hit-&gt;Implements&lt;UHasardInteractable&gt;())\n  {\n    IHasardInteractable::Execute_OnPlayerInteract(Hit, this);\n  }\n}</code></pre> <p><b>Phase 3 &mdash; build, then place the felt.</b></p> <p><b>9.</b> <code>Ctrl+Shift+B</code>, reopen.</p> <p><b>10.</b> Create <code>BP_BetSpot</code>. Give its box a visible mesh if you like, and set <b>Collision Presets</b> to <code>BlockAll</code> — otherwise the trace passes straight through it.</p> <p><b>11.</b> Place three in the level and set each one differently in the Details panel: Straight Up on 17, Red, Even.</p> <p><b>12.</b> Play. Look at each, click, and confirm the right bet type logs. Aim at the sky and confirm a red debug line and no hit.</p> <p><b>13.</b> Commit. <b>This is Guide 1 Module 6 working end to end.</b></p> <pre><code>git add -A\ngit commit -m "Add interaction trace and IHasardInteractable bet spots" -m "Component traces and asks; the actor decides what interacting means. Execute_ rather than casting to the interface, so Blueprint-added implementations also work."</code></pre>'},
+{t:'srcs',x:[['Collision in Unreal Engine','https://dev.epicgames.com/documentation/en-us/unreal-engine/collision-in-unreal-engine'],['Traces with Raycasts','https://dev.epicgames.com/documentation/en-us/unreal-engine/traces-with-raycasts-in-unreal-engine']]}
+],
+quiz:[
+{q:'A static mesh never registers a Visibility trace hit. Most likely:',
+ opts:['Its mobility is Static','Its collision preset is NoCollision or OverlapAll','It has no material','It is too far away'],
+ c:1,why:'Neither preset produces a blocking hit for that channel. Check the details panel first.'},
+{q:'<code>Implements&lt;UHasardInteractable&gt;()</code> returns:',
+ opts:['nullptr on failure','An IHasardInteractable pointer','The actor, cast to the interface','A bool'],
+ c:3,why:'It is a question, not a conversion. Nothing is cast and no pointer comes back.'},
+{q:'Why is the target passed as the first argument to <code>Execute_OnPlayerInteract</code>?',
+ opts:['Because interfaces cannot use the arrow operator','Because it might be null','Because Execute_ is static, and static functions have no receiver','Because it is a template'],
+ c:2,why:'The :: is the giveaway (Guide 1, Module 2). No instance means no left-hand side.'},
+{q:'Bet spots use EditInstanceOnly for their bet type because:',
+ opts:['Every square on the felt is genuinely a different bet','EditDefaultsOnly does not work on enums','It is faster','Blueprint requires it'],
+ c:0,why:'This is the rare case where per-instance variation is the whole point — unlike PocketCount, which is a rule.'},
+{q:'Highlighting the numbers adjacent to the winner would be:',
+ opts:['Good feedback design','Neutral, if it is subtle','Required for accessibility','A near-miss dark pattern, and prohibited in this project'],
+ c:3,why:'It feels like helpful feedback, which is exactly why it is the most studied manipulative mechanic in gambling design.'}
+]
+},
+
+/* ---------------------------------------------------------- 9 */
+{
+grp:"Part III — Playing the Table",
+title:"Containers: holding the bets",
+lede:"TArray is the one you will use constantly. Here is the API that matters and the two mistakes that cause crashes.",
+blocks:[
+{t:'h',x:'The active bets'},
+{t:'code',x:`// HasardBettingComponent.h
+UPROPERTY(BlueprintReadOnly, Category = "Hasard|Betting")
+TArray<FHasardBet> ActiveBets;`},
+{t:'code',x:`bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake)
+{
+  if (Stake <= 0) return false;
+
+  ActiveBets.Emplace(FHasardBet{ BetType, PrimaryNumber, Stake });
+  return true;
+}
+
+int32 UHasardBettingComponent::GetTotalStaked() const
+{
+  int32 Total = 0;
+  for (const FHasardBet& Bet : ActiveBets)   // ranged-for, const ref, no copies
+  {
+    Total += Bet.Stake;
+  }
+  return Total;
+}`},
+{t:'aside',lab:'Add versus Emplace',x:'<p>Both append. <code>Add</code> copies or moves an existing instance in; <code>Emplace</code> constructs the element <b>directly in place</b> from the arguments you give it.</p><p>Epic\'s rule of thumb: <b><code>Add</code> for trivial types, <code>Emplace</code> otherwise.</b> <code>Emplace</code> is never slower; <code>Add</code> sometimes reads better.</p>'},
+{t:'p',x:'Note <code>const FHasardBet&amp;</code> in the loop — Guide 1 Module 3. A reference avoids copying each struct; the <code>const</code> promises you will not modify them.'},
+
+{t:'h',x:'The working subset'},
+{t:'code',x:`ActiveBets.Num();                      // count
+ActiveBets.IsEmpty();                  // clearer than Num() == 0
+ActiveBets.Empty();                    // clear all - end of round
+ActiveBets.RemoveAt(Index);            // remove one
+ActiveBets.IsValidIndex(Index);        // guard before indexing
+ActiveBets.Contains(SomeBet);          // needs operator== on FHasardBet
+ActiveBets.Find(SomeBet);              // index, or INDEX_NONE`},
+{t:'warn',lab:'Two ways to crash with TArray',x:'<p><b>1. Out-of-range access.</b> <code>ActiveBets[5]</code> on a four-element array crashes. Guard with <code>IsValidIndex</code> or use a ranged-for.</p><p><b>2. Modifying while iterating.</b> Removing elements inside a ranged-for invalidates the iteration. Iterate backwards by index instead:</p><p><code>for (int32 i = ActiveBets.Num() - 1; i >= 0; --i)</code></p><p>Going backwards means removals do not disturb the indices you have yet to visit.</p>'},
+{t:'chk',q:'Settling a round removes losing bets as it goes. Why iterate backwards?',a:'Removing element <code>i</code> shifts every later element down by one. Going forwards, you skip the bet that moved into slot <code>i</code> — so some losing bets would survive and some winning ones would never be paid. Going backwards, everything you have yet to visit sits at a lower index and is unaffected.'},
+
+{t:'h',x:'TMap for the payout lookup'},
+{t:'code',x:`// Which numbers does each bet type cover, for a given primary number?
+TMap<EHasardBetType, int32> PayoutRatios;
+
+PayoutRatios.Add(EHasardBetType::StraightUp, 35);
+PayoutRatios.Add(EHasardBetType::Split,      17);
+PayoutRatios.Add(EHasardBetType::Red,         1);
+
+// Safe lookup - returns nullptr if absent
+if (const int32* Ratio = PayoutRatios.Find(BetType))
+{
+  Winnings = Bet.Stake * (*Ratio);
+}`},
+{t:'warn',lab:'Operator[] on a TMap',x:'<code>PayoutRatios[BetType]</code> on a missing key <b>crashes</b>. It does not silently insert a default. Use <code>Find</code> (pointer, null if absent) or <code>FindRef</code> (value copy, default if absent).'},
+
+{t:'h',x:'UPROPERTY and containers'},
+{t:'code',x:`// The UPROPERTY tracks every element for garbage collection
+UPROPERTY()
+TArray<TObjectPtr<AHasardBetSpot>> HighlightedSpots;`},
+{t:'p',x:'A <code>TArray</code> of raw UObject pointers without <code>UPROPERTY()</code> has the Guide 1 Module 12 problem multiplied by the element count: none of those references are visible to the garbage collector.'},
+
+{t:'build',title:'Track the bets',file:'Source/Hasard/HasardBettingComponent.*',x:'<p><b>Visual Studio only</b>, then test in the editor.</p> <p><b>1.</b> Add the array and the query function to the header:</p> <pre><code>UPROPERTY(BlueprintReadOnly, Category = "Hasard|Betting")\nTArray&lt;FHasardBet&gt; ActiveBets;\n\nUFUNCTION(BlueprintPure, Category = "Hasard|Betting")\nint32 GetTotalStaked() const;</code></pre> <p><b>2.</b> Replace the stubbed <code>PlaceBet</code> with the real one, and implement the rest:</p> <pre><code>bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake)\n{\n  if (Stake &lt;= 0) return false;\n\n  ActiveBets.Emplace(FHasardBet{ BetType, PrimaryNumber, Stake });\n\n  UE_LOG(LogHasard, Warning, TEXT("Bets: %d, total staked: %d"),\n         ActiveBets.Num(), GetTotalStaked());\n  return true;\n}\n\nint32 UHasardBettingComponent::GetTotalStaked() const\n{\n  int32 Total = 0;\n  for (const FHasardBet&amp; Bet : ActiveBets)\n  {\n    Total += Bet.Stake;\n  }\n  return Total;\n}\n\nvoid UHasardBettingComponent::ClearAllBets()\n{\n  ActiveBets.Empty();\n}</code></pre> <p><b>3.</b> Have <code>AHasardBetSpot::OnPlayerInteract_Implementation</code> call <code>PlaceBet</code> on the instigator pawn\'s betting component, passing its own <code>BetType</code> and <code>PrimaryNumber</code>. Clicking a square now places that square\'s bet. <code>HasardBetSpot.cpp</code> gains one include for that:</p> <pre><code>#include "HasardBettingComponent.h"   // calling PlaceBet needs the full type</code></pre> <p><b>4.</b> Build, reopen, Play. Click the three spots repeatedly and watch the total climb.</p> <p><b>5.</b> <b>The experiment.</b> Write a throwaway <code>SettleRound</code> that loops <b>forwards</b> and removes every losing bet:</p> <pre><code>for (int32 i = 0; i &lt; ActiveBets.Num(); ++i)\n{\n  if (!BetWins(ActiveBets[i], WinningPocket))\n  {\n    ActiveBets.RemoveAt(i);   // BUG\n  }\n}</code></pre> <p>Place three losing bets and run it. One survives. Now change the loop to <code>for (int32 i = ActiveBets.Num() - 1; i &gt;= 0; --i)</code> and run it again. None survive. Ten seconds of work for a bug class you will now never ship.</p> <p><b>6.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Track active bets in a TArray with running stake total" -m "Removal iterates backwards: removing forwards skips the element that shifts into the visited slot, so some losing bets survive and some winners never pay."</code></pre>'},
+{t:'srcs',x:[['Containers in Unreal Engine','https://dev.epicgames.com/documentation/en-us/unreal-engine/containers-in-unreal-engine'],['TArray: Arrays in Unreal Engine','https://dev.epicgames.com/documentation/en-us/unreal-engine/array-containers-in-unreal-engine']]}
+],
+quiz:[
+{q:'Removing elements from a TArray while looping forwards causes:',
+ opts:['Skipped elements, because later items shift down into visited slots','A compile error','Automatic reallocation','Nothing, it is safe'],
+ c:0,why:'Iterate backwards by index when removing, so pending indices are undisturbed.'},
+{q:'<code>PayoutRatios[BetType]</code> where the key is absent:',
+ opts:['Returns nullptr','Returns a default-constructed value','Inserts the key silently','Crashes'],
+ c:3,why:'Use Find (pointer, null if absent) or FindRef (value, default if absent) instead.'},
+{q:'<code>for (const FHasardBet& Bet : ActiveBets)</code> — why the const reference?',
+ opts:['Structs cannot be copied','It is required by ranged-for','To avoid copying each struct, while promising not to modify them','To allow removal during iteration'],
+ c:2,why:'Guide 1, Module 3. The reference avoids the copy; the const documents intent.'},
+{q:'Epic\'s rule of thumb on Add versus Emplace:',
+ opts:['Always use Add','Add for trivial types, Emplace otherwise','Always use Emplace','They are identical'],
+ c:1,why:'Emplace constructs in place and is never slower; Add sometimes reads better for simple types.'},
+{q:'<code>TArray&lt;AHasardBetSpot*&gt;</code> as a member without UPROPERTY():',
+ opts:['Works fine, arrays are tracked automatically','Will not compile','Is automatically replicated','Leaves every element invisible to the garbage collector'],
+ c:3,why:'The Guide 1 dangling-pointer problem, once per element.'}
+]
+},
+
+/* ---------------------------------------------------------- 10 */
+{
+grp:"Part IV — The Responsible Gaming Layer",
+title:"The bankroll, and telling the world",
+lede:"Guide 1 explained delegates in theory. Here you build the component that made the theory worth learning — and it is the heart of the project's thesis.",
+blocks:[
+{t:'h',x:'The design'},
+{t:'p',x:'The bankroll lives in a component on the PlayerState. Nothing outside it may write the balance directly — that is Guide 1 Module 4\'s encapsulation lesson, and it is what makes the event reliable. All changes route through one function, which validates, applies, and broadcasts.'},
+{t:'rg',lab:'Why this component is the thesis',x:'A conventional implementation tracks a balance. This one tracks <b>balance, total staked this session, and total lost this session</b> — because the last two are what a player actually needs to see and what commercial products reliably hide. The extra two integers are the entire difference between a roulette game and a responsible-gaming demonstration.'},
+{t:'code',x:`// HasardBankrollComponent.h
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnBankrollChanged,
+    int32, NewBalance,
+    int32, Delta,
+    int32, SessionNetChange);
+
+UCLASS(ClassGroup=(Hasard), meta=(BlueprintSpawnableComponent))
+class HASARD_API UHasardBankrollComponent : public UActorComponent
+{
+  GENERATED_BODY()
+
+public:
+  UPROPERTY(BlueprintAssignable, Category = "Hasard|Bankroll")
+  FOnBankrollChanged OnBankrollChanged;
+
+  UFUNCTION(BlueprintCallable, Category = "Hasard|Bankroll")
+  bool TryStake(int32 Amount);
+
+  UFUNCTION(BlueprintCallable, Category = "Hasard|Bankroll")
+  void CreditWinnings(int32 Amount);
+
+  UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
+  int32 GetSessionNetChange() const { return TotalWon - TotalStaked; }
+
+protected:
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Bankroll")
+  int32 StartingBalance = 500;
+
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
+  int32 Balance = 500;
+
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
+  int32 TotalStaked = 0;
+
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
+  int32 TotalWon = 0;
+};`},
+{t:'p',x:'Count the commas in that macro: three parameters means six entries after the name, alternating type and variable name. Guide 1 warned about this and it remains the most common macro error.'},
+{t:'code',x:`bool UHasardBankrollComponent::TryStake(int32 Amount)
+{
+  if (Amount <= 0 || Amount > Balance)
+  {
+    return false;     // cannot bet what you do not have
+  }
+
+  Balance     -= Amount;
+  TotalStaked += Amount;
+
+  OnBankrollChanged.Broadcast(Balance, -Amount, GetSessionNetChange());
+  return true;
+}
+
+void UHasardBankrollComponent::CreditWinnings(int32 Amount)
+{
+  if (Amount <= 0) return;
+
+  Balance  += Amount;
+  TotalWon += Amount;
+
+  OnBankrollChanged.Broadcast(Balance, Amount, GetSessionNetChange());
+}`},
+{t:'rg',lab:'A loss must read as a loss',x:'<p>Consider a player who stakes 100 across several bets and wins 40 back. Balance moved by &minus;60. A commercial product would fire a win animation on the 40 and stay silent on the 100 — that is a <b>loss disguised as a win</b>, and it is why <code>SessionNetChange</code> is broadcast alongside the delta.</p><p>The UI in Module 11 shows the net, not the last event. If the session is down, the player can see that it is down, at all times.</p>'},
+{t:'chk',q:'Why is <code>Balance</code> <code>VisibleAnywhere</code> rather than <code>EditAnywhere</code>?',a:'Writing it directly would bypass <code>TryStake</code> and skip both the validation and the broadcast. You want to <i>see</i> the value while debugging, never to hand-edit it. <code>StartingBalance</code>, by contrast, is a tuning value and is correctly <code>EditDefaultsOnly</code>.'},
+{t:'chk',q:'<code>TryStake</code> returns bool. Why does that matter more here than in most systems?',a:'Because the caller must not place a bet it cannot pay for. If <code>TryStake</code> returned void, <code>PlaceBet</code> would happily add a bet to <code>ActiveBets</code> whose stake was never deducted — and the player would win money they never risked. The return value is what couples the two systems safely.'},
+
+{t:'h',x:'Listening'},
+{t:'code',x:`// HasardPlayerController.h
+UFUNCTION()      // REQUIRED for AddDynamic
+void HandleBankrollChanged(int32 NewBalance, int32 Delta, int32 SessionNetChange);
+
+// HasardPlayerController.cpp
+void AHasardPlayerController::BeginPlay()
+{
+  Super::BeginPlay();
+
+  if (AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>())
+  {
+    if (UHasardBankrollComponent* Bank = PS->FindComponentByClass<UHasardBankrollComponent>())
+    {
+      Bank->OnBankrollChanged.AddDynamic(this, &AHasardPlayerController::HandleBankrollChanged);
+    }
+  }
+}`},
+{t:'p',x:'Three Guide 1 rules converge: bound in <code>BeginPlay</code> not the constructor; the function marked <code>UFUNCTION()</code>; the signature matching the delegate exactly. Break any one and it fails silently.'},
+
+{t:'h',x:'The wheel announces its result the same way'},
+{t:'code',x:`// HasardWheel.h
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBallSettled, int32, WinningPocket);
+
+UPROPERTY(BlueprintAssignable, Category = "Hasard|Wheel")
+FOnBallSettled OnBallSettled;
+
+// ...and when the spin timer elapses
+OnBallSettled.Broadcast(WinningPocket);`},
+{t:'p',x:'The wheel has no idea the GameMode, the HUD and the bankroll are all listening. That ignorance is the design.'},
+
+{t:'build',title:'Build the bankroll',file:'Source/Hasard/HasardBankrollComponent.*',x:'<p><b>Phase 1 &mdash; editor.</b></p> <p><b>1.</b> New C++ Class &rarr; <b>Actor Component</b> &rarr; <code>HasardBankrollComponent</code>. Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>2.</b> <code>HasardBankrollComponent.h</code> &mdash; the delegate declaration above the class, then the properties and functions from the lecture.</p> <p><b>3.</b> <code>HasardBankrollComponent.cpp</code> &mdash; <code>TryStake</code>, <code>CreditWinnings</code>, and set <code>Balance = StartingBalance</code> in <code>BeginPlay</code>. Only its own header is needed here.</p> <p><b>4.</b> <code>HasardPlayerState.h/.cpp</code> &mdash; forward declare, add a <code>TObjectPtr&lt;UHasardBankrollComponent&gt; BankrollComp;</code> property and create it in the constructor.</p> <pre><code>// HasardPlayerState.h\nclass UHasardBankrollComponent;   // pointer only - forward declare\n\n// HasardPlayerState.cpp\n#include "HasardBankrollComponent.h"   // CreateDefaultSubobject needs the definition</code></pre> <p><b>5.</b> <code>HasardPlayerController.h</code> &mdash; declare the handler. <b>The <code>UFUNCTION()</code> is not optional:</b></p> <pre><code>UFUNCTION()\nvoid HandleBankrollChanged(int32 NewBalance, int32 Delta, int32 SessionNetChange);</code></pre> <p><b>6.</b> <code>HasardPlayerController.cpp</code> &mdash; bind in <code>BeginPlay</code> and log all three values, as in the lecture.</p> <pre><code>#include "HasardPlayerController.h"\n#include "HasardPlayerState.h"          // to reach the bankroll component\n#include "HasardBankrollComponent.h"    // AddDynamic on its delegate</code></pre> <p><b>7.</b> <b>Couple betting to the bankroll.</b> In <code>UHasardBettingComponent::PlaceBet</code>, take the stake <i>before</i> recording the bet, and bail out if it fails:</p> <pre><code>UHasardBankrollComponent* Bank = /* from the owning pawn\'s PlayerState */;\nif (!Bank || !Bank-&gt;TryStake(Stake))\n{\n  return false;   // cannot afford it - the bet must not enter the array\n}\n\nActiveBets.Emplace(FHasardBet{ BetType, PrimaryNumber, Stake });\nreturn true;</code></pre> <p>This is why <code>TryStake</code> returns <code>bool</code>. Without the check, a player places bets they never paid for and wins money they never risked.</p> <p><b>8.</b> <code>HasardWheel.h/.cpp</code> &mdash; add the <code>OnBallSettled</code> delegate and broadcast a random pocket when the spin timer elapses:</p> <pre><code>const int32 WinningPocket = FMath::RandRange(0, PocketCount - 1);\nOnBallSettled.Broadcast(WinningPocket);</code></pre> <p>The spin uses a timer, so <code>HasardWheel.cpp</code> needs the same pair Module 4 introduced:</p> <pre><code>#include "Engine/World.h"\n#include "TimerManager.h"</code></pre> <p><b>The spin timer uses <code>SpinDuration</code> unmodified — no padding.</b> A settle beat, if you want one, is a second named property and a second timer, never a fudge added to the first. Two numbers describing one spin will drift the moment someone retunes it. And note the spin is a <i>gameplay</i> duration, so unlike the session clock it correctly runs on world time.</p> <p><b>Phase 3 &mdash; build and test.</b></p> <p><b>9.</b> <code>Ctrl+Shift+B</code>, reopen, Play. Place bets until you run out. Confirm the balance never goes negative and the log shows session net change.</p> <p><b>10.</b> <b>Deliberately break it.</b> Remove the <code>UFUNCTION()</code> from <code>HandleBankrollChanged</code>, rebuild, place a bet. It compiles, it runs, and the callback never fires — no error anywhere. Put it back. You have now <i>seen</i> the failure mode instead of reading about it, and you will recognise it at 2am.</p> <p><b>11.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Add bankroll component with OnBankrollChanged delegate" -m "Tracks TotalStaked and TotalWon separately from Balance so session cost is visible, not just the current number. TryStake returns bool so a bet whose stake was not deducted can never enter the array."</code></pre>'},
+{t:'srcs',x:[['Delegates and Lambda Functions','https://dev.epicgames.com/documentation/en-us/unreal-engine/delegates-and-lambda-functions-in-unreal-engine']]}
+],
+quiz:[
+{q:'Why does the bankroll track TotalStaked and TotalWon separately from Balance?',
+ opts:['To support undo','Because balance alone hides how much the session has cost — which is what the player needs to see','For replication','Because int32 overflows'],
+ c:1,why:'Those two extra integers are the difference between a roulette game and a responsible-gaming demonstration.'},
+{q:'<code>TryStake</code> returns bool because:',
+ opts:['Blueprint requires a return value','Delegates need it','The caller must not add a bet whose stake was never deducted','It is faster than void'],
+ c:2,why:'The return value is what safely couples betting to the bankroll. Without it the player wins money they never risked.'},
+{q:'DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams takes how many entries after the name?',
+ opts:['6','3','9','12'],
+ c:0,why:'Type and name per parameter: 2 x 3 = 6, comma-separated.'},
+{q:'Staking 100 and winning 40 back should present to the player as:',
+ opts:['A win, since 40 was credited','A win with a smaller animation','Neutral','A net loss of 60'],
+ c:3,why:'Celebrating the 40 while staying silent on the 100 is a loss disguised as a win — the second dark pattern this project refuses.'},
+{q:'You removed UFUNCTION() from a bound callback. What happens?',
+ opts:['The delegate broadcasts to all objects','Link error','It compiles and runs, but the callback silently never fires','Compile error'],
+ c:2,why:'Silent failure is what makes this worth reproducing once, deliberately.'}
+]
+},
+
+/* ---------------------------------------------------------- 11 */
+{
+grp:"Part IV — The Responsible Gaming Layer",
+title:"The HUD: making the cost visible",
+lede:"Enough UMG to show spend, session time and true odds. This is where the project's stance becomes something a player can see.",
+blocks:[
+{t:'h',x:'The division of labour'},
+{t:'p',x:'Do not build UI layout in C++. It is possible and it is miserable.'},
+{t:'list',x:[
+'<b>Blueprint widget</b> — layout, styling, animation. Designed visually in UMG.',
+'<b>C++</b> — creating the widget, adding it to the viewport, and feeding it data.']},
+{t:'code',x:`PublicDependencyModuleNames.AddRange(new string[] {
+    "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG" });`},
+
+{t:'h',x:'Creating the HUD from C++'},
+{t:'code',x:`// HasardPlayerController.h
+#include "Blueprint/UserWidget.h"
+
+UPROPERTY(EditDefaultsOnly, Category = "Hasard|UI")
+TSubclassOf<UUserWidget> HUDWidgetClass;
+
+UPROPERTY()
+TObjectPtr<UUserWidget> HUDWidget;`},
+{t:'code',x:`void AHasardPlayerController::BeginPlay()
+{
+  Super::BeginPlay();
+
+  if (HUDWidgetClass)
+  {
+    HUDWidget = CreateWidget<UUserWidget>(this, HUDWidgetClass);
+    if (HUDWidget)
+    {
+      HUDWidget->AddToViewport();
+    }
+  }
+}`},
+{t:'p',x:'<code>TSubclassOf&lt;UUserWidget&gt;</code> is Guide 1 Module 9 doing real work: C++ owns <i>when</i> the HUD appears, a designer chooses <i>which</i>. Note the <code>UPROPERTY()</code> on the instance — without it the widget is invisible to the garbage collector.'},
+{t:'chk',q:'Why <code>TSubclassOf&lt;UUserWidget&gt;</code> rather than <code>UUserWidget*</code>?',a:'Because you want the <b>class</b>, not an instance — no widget exists yet. <code>CreateWidget</code> takes the class and produces the instance. A pointer would mean pointing at an already-created widget, which is not what you have.'},
+
+{t:'h',x:'Getting data in'},
+{t:'code',x:`// C++ declares it; Blueprint implements it. No C++ body at all.
+UFUNCTION(BlueprintImplementableEvent, Category = "Hasard|UI")
+void UpdateBankroll(int32 Balance, int32 TotalStaked, int32 SessionNetChange);
+
+UFUNCTION(BlueprintImplementableEvent, Category = "Hasard|UI")
+void ShowRealityCheck(int32 MinutesElapsed, int32 TotalStaked, int32 SessionNetChange);`},
+{t:'table',head:['Specifier','C++ body?','Blueprint may…'],rows:[
+['<code>BlueprintCallable</code>','Yes','call it'],
+['<code>BlueprintNativeEvent</code>','Yes, as <code>_Implementation</code>','override or extend it'],
+['<code>BlueprintImplementableEvent</code>','<b>No</b> — you write none','implement it entirely']]},
+
+{t:'rg',lab:'What the HUD must always show',x:'<p>Four things, permanently visible, not behind a menu:</p><p><b>Balance</b> — the obvious one.<br><b>Total staked this session</b> — the number commercial products bury.<br><b>Session net change</b> — signed, so a losing session reads as negative rather than as a balance that happens to be smaller.<br><b>Session duration</b> — a quiet clock.</p><p>The design test from the project\'s CLAUDE.md applies literally here: <b>if it takes a menu dive, it is hidden.</b></p>'},
+{t:'aside',lab:'Where the delegate finally pays off',x:'The chain now runs end to end: a click calls <code>PlaceBet</code> &rarr; which calls <code>TryStake</code> &rarr; which broadcasts <code>OnBankrollChanged</code> &rarr; the bound <code>UFUNCTION</code> fires &rarr; it calls <code>UpdateBankroll</code> on the widget &rarr; the Blueprint sets three text blocks. Nothing polls. Nothing ticks. Every link is something you learned in Guide 1 and have now built.'},
+
+{t:'h',x:'The reality check'},
+{t:'p',x:'The timer from Module 4 now has something to do. When it fires, the controller calls <code>ShowRealityCheck</code>, and pushes an input mapping context that suppresses betting until dismissed.'},
+{t:'code',x:`void AHasardPlayerController::HandleRealityCheck(int32 MinutesElapsed)
+{
+  if (!HUDWidget) return;
+
+  // Suppress table input while the check is up - Module 6's contexts
+  if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+      ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+  {
+    Subsystem->AddMappingContext(RealityCheckContext, 10);   // higher priority
+  }
+
+  ShowRealityCheck(MinutesElapsed, GetTotalStaked(), GetSessionNetChange());
+}`},
+{t:'chk',q:'Why push a mapping context instead of a <code>bRealityCheckActive</code> flag checked in every input handler?',a:'Because you will eventually add a handler and forget the check. A context pushed at higher priority suppresses the table bindings <i>structurally</i> — there is no handler to forget. It is the same instinct as routing all balance changes through one function: make the safe thing the only path rather than a rule everyone has to remember.'},
+
+{t:'build',title:'A HUD that shows the cost',file:'Content/UI/ + HasardPlayerController',x:'<p><b>Phase 1 &mdash; editor. Create the assets first.</b></p> <p><b>1.</b> Content Browser &rarr; folder <code>UI</code> &rarr; right-click &rarr; <b>User Interface &rarr; Widget Blueprint</b> &rarr; parent <b>User Widget</b> &rarr; <code>WBP_HUD</code>.</p> <p><b>2.</b> Open it and add four <b>Text Blocks</b> to the canvas: Balance, Staked, Net, Time. Name them so you can find them in the graph.</p> <p><b>3.</b> Right-click &rarr; <b>Input &rarr; Input Mapping Context</b> &rarr; <code>IMC_RealityCheck</code>. Leave it <b>empty</b> — an empty context at higher priority is what suppresses the table bindings.</p> <p><b>4.</b> Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>5.</b> <code>Hasard.Build.cs</code> &mdash; add <code>"UMG"</code> to the dependency list:</p> <pre><code>PublicDependencyModuleNames.AddRange(new string[] {\n    "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG" });</code></pre> <p>A missing module gives you an <b>unresolved external symbol</b> at link time, not a missing-include error — the header is found, the compiled code is not. If you later use Slate types directly, add <code>"Slate"</code> and <code>"SlateCore"</code> as well; <code>UUserWidget</code> alone does not need them.</p> <p><b>6.</b> <code>HasardPlayerController.h</code> &mdash; the widget class property, the instance, the reality-check context, and the two <code>BlueprintImplementableEvent</code>s from the lecture. Remember <code>#include "Blueprint/UserWidget.h"</code>.</p> <p><b>7.</b> <code>HasardPlayerController.cpp</code> &mdash; create the widget in <code>BeginPlay</code> and add it to the viewport. Then have <code>HandleBankrollChanged</code> call <code>UpdateBankroll</code> instead of only logging.</p> <pre><code>#include "HasardPlayerController.h"\n#include "Blueprint/UserWidget.h"        // CreateWidget, AddToViewport\n#include "EnhancedInputSubsystems.h"     // pushing IMC_RealityCheck\n#include "InputMappingContext.h"\n#include "HasardPlayerState.h"\n#include "HasardBankrollComponent.h"</code></pre> <p><b>8.</b> Route the PlayerState\'s <code>RealityCheck()</code> to the controller: push <code>IMC_RealityCheck</code> at priority 10 and call <code>ShowRealityCheck</code>. The elapsed figure it displays comes from <code>GetSessionElapsedSeconds()</code> — the wall-clock accessor from Module 4. <b>Do not recompute it from <code>GetTimeSeconds()</code> here</b>, or the HUD will quietly disagree with the log.</p> <p><b>Phase 3 &mdash; build.</b></p> <p><b>9.</b> <code>Ctrl+Shift+B</code>. Regenerate project files if the <code>.Build.cs</code> change is not picked up. Reopen.</p> <p><b>Phase 4 &mdash; wire and verify.</b></p> <p><b>10.</b> Create <code>BP_HasardPlayerController</code>, assign <code>WBP_HUD</code> and <code>IMC_RealityCheck</code>, and set it as <b>Player Controller Class</b> in <code>BP_HasardGameMode</code>.</p> <p><b>11.</b> In <code>WBP_HUD</code>, implement the <code>UpdateBankroll</code> event to set the three text blocks, and <code>ShowRealityCheck</code> to display a panel with a dismiss button that pops the context back off.</p> <p><b>12.</b> <b>Verify the thing that matters:</b> stake 100 across several bets, win 40 back, and confirm the HUD reads <b>&minus;60</b>. If it shows a win, the loss is disguised and the module has failed.</p> <p><b>13.</b> Confirm clicking does nothing while the reality check is up.</p> <p><b>14.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Add HUD showing balance, session stake and net change" -m "Net change is signed and always visible, so a losing session reads as negative rather than as a balance that happens to be smaller. Reality check suppresses table input by pushing a higher-priority mapping context rather than a bool flag, so there is no handler left to forget."</code></pre>'},
+{t:'srcs',x:[['UMG UI Designer Quick Start Guide','https://dev.epicgames.com/documentation/en-us/unreal-engine/umg-ui-designer-quick-start-guide-in-unreal-engine'],['Creating Widgets','https://dev.epicgames.com/documentation/en-us/unreal-engine/creating-widgets-in-unreal-engine']]}
+],
+quiz:[
+{q:'Which specifier means C++ declares a function but writes no body at all?',
+ opts:['BlueprintPure','BlueprintCallable','BlueprintNativeEvent','BlueprintImplementableEvent'],
+ c:3,why:'Blueprint supplies the entire implementation. Ideal for handing presentation to a widget.'},
+{q:'The HUD widget instance member needs UPROPERTY() because:',
+ opts:['Otherwise it is invisible to the garbage collector','It is required by CreateWidget','Otherwise it will not appear','It enables AddToViewport'],
+ c:0,why:'Same rule as any UObject pointer member.'},
+{q:'Suppressing input during the reality check via a mapping context rather than a bool flag is better because:',
+ opts:['It works in Blueprint','Contexts support gamepads','There is no handler left to forget when you add a new input later','It is faster'],
+ c:2,why:'Make the safe thing structural rather than a rule everyone must remember.'},
+{q:'A session with 100 staked and 40 won should display:',
+ opts:['+40','−60','0','Balance only'],
+ c:1,why:'Showing the credit without the cost is a loss disguised as a win.'},
+{q:'UI layout is best authored in:',
+ opts:['C++, for performance','The level Blueprint','Slate, always','A Widget Blueprint, with C++ deciding when it appears and what data it gets'],
+ c:3,why:'Hand-authoring layout in C++ is possible and unpleasant. Split by strength.'}
+]
+},
+
+/* ---------------------------------------------------------- 12 */
+{
+grp:"Part IV — The Responsible Gaming Layer",
+title:"Data-driven payouts and honest odds",
+lede:"Move the payout table out of code — and in doing so, make the house edge something the game can state rather than something it hides.",
+blocks:[
+{t:'h',x:'Why this matters at your scale'},
+{t:'p',x:'Every hardcoded number is a rebuild every time you want to try a different one. At two minutes a build, twenty tuning passes is forty minutes of waiting. But here there is a second reason, and it is the more important one.'},
+
+{t:'h',x:'The payout table as a Data Asset'},
+{t:'code',x:`USTRUCT(BlueprintType)
+struct FHasardPayoutRule
+{
+  GENERATED_BODY()
+
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  EHasardBetType BetType = EHasardBetType::StraightUp;
+
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  int32 PayoutRatio = 35;          // pays 35 to 1
+
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  int32 CoveredNumbers = 1;        // out of 37
+
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  FText DisplayName;               // player-facing - FText, Guide 1 Module 9
+};
+
+UCLASS(BlueprintType)
+class HASARD_API UHasardPayoutTable : public UPrimaryDataAsset
+{
+  GENERATED_BODY()
+
+public:
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  TArray<FHasardPayoutRule> Rules;
+
+  UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Payout")
+  int32 PocketCount = 37;
+};`},
+{t:'chk',q:'Why <code>FText</code> for DisplayName but <code>int32</code> for PayoutRatio?',a:'<code>DisplayName</code> is read by a player, so it must be localisable — Guide 1 Module 9\'s rule, and the mistake that is expensive to undo. In Quebec that is not hypothetical: a French-first product with English-only <code>FString</code> labels is a rewrite. <code>PayoutRatio</code> is never displayed raw; you format it into an <code>FText</code> at the point of display.'},
+
+{t:'h',x:'The two numbers that tell the truth'},
+{t:'p',x:'With <code>CoveredNumbers</code> and <code>PocketCount</code> in the data, the game can compute and state the things a casino never volunteers:'},
+{t:'code',x:`float UHasardPayoutTable::GetWinProbability(const FHasardPayoutRule& Rule) const
+{
+  return static_cast<float>(Rule.CoveredNumbers) / static_cast<float>(PocketCount);
+}
+
+// True odds against, expressed as "X to 1"
+float UHasardPayoutTable::GetTrueOdds(const FHasardPayoutRule& Rule) const
+{
+  const int32 Losing = PocketCount - Rule.CoveredNumbers;
+  return static_cast<float>(Losing) / static_cast<float>(Rule.CoveredNumbers);
+}
+
+// The house edge, as a fraction. Identical for every bet on a fair wheel.
+float UHasardPayoutTable::GetHouseEdge(const FHasardPayoutRule& Rule) const
+{
+  const float P = GetWinProbability(Rule);
+  return 1.0f - (P * (Rule.PayoutRatio + 1));
+}`},
+{t:'table',head:['Bet','Pays','Covers','True odds','House edge'],rows:[
+['Straight Up','35:1','1 / 37','36 to 1','2.70%'],
+['Split','17:1','2 / 37','17.5 to 1','2.70%'],
+['Corner','8:1','4 / 37','8.25 to 1','2.70%'],
+['Dozen','2:1','12 / 37','2.08 to 1','2.70%'],
+['Red','1:1','18 / 37','1.06 to 1','2.70%']]},
+{t:'rg',lab:'The most useful thing you can tell a player',x:'<p>Look down that last column. <b>Every bet on the table has an identical house edge.</b> There is no better bet, no clever combination, no system. The straight-up that pays 35:1 and the red that pays 1:1 cost the player exactly the same per dollar staked over time.</p><p>That single fact dissolves the entire premise of gambling "strategy", and almost no commercial product states it — because the illusion of skill is what keeps people at the table. Displaying it is the strongest single thing this project does.</p>'},
+{t:'chk',q:'A player asks which bet gives them the best chance. What does your game tell them?',a:'That straight-up wins 1 time in 37 and red wins 18 times in 37 — so red wins far more often — but that <b>both cost 2.70% of everything staked</b>, so neither is "better" in the sense they mean. The honest answer is that the choice changes the shape of the outcomes, not the expected cost. Being able to say that clearly, in a game, is the portfolio piece.'},
+
+{t:'h',x:'Three levels of getting numbers out of code'},
+{t:'table',head:['Mechanism','Use for'],rows:[
+['<code>EditDefaultsOnly</code> property','One value on one class — <code>SpinDuration</code>, <code>StartingBalance</code>'],
+['<b>Data Asset</b>','A bundle of values with many named variants — the payout table'],
+['<code>UDeveloperSettings</code>','Genuinely global values that belong in Project Settings']]},
+
+{t:'build',title:'Build the payout table',file:'Source/Hasard/HasardPayoutTable.*',x:'<p><b>Phase 1 &mdash; editor.</b></p> <p><b>1.</b> New C++ Class &rarr; <b>All Classes</b> &rarr; search <code>PrimaryDataAsset</code> &rarr; name it <code>HasardPayoutTable</code>. Close the editor.</p> <p><b>Phase 2 &mdash; Visual Studio.</b></p> <p><b>2.</b> <code>HasardPayoutTable.h</code> &mdash; the <code>FHasardPayoutRule</code> struct, the <code>Rules</code> array, <code>PocketCount</code>, and the three calculation functions from the lecture. Mark them <code>UFUNCTION(BlueprintPure)</code> so the HUD can call them.</p> <p><b>3.</b> <code>HasardPayoutTable.cpp</code> &mdash; implement <code>GetWinProbability</code>, <code>GetTrueOdds</code> and <code>GetHouseEdge</code>. Add a lookup helper:</p> <pre><code>// HasardPayoutTable.h\n#include "Engine/DataAsset.h"   // UPrimaryDataAsset\n#include "HasardTypes.h"        // EHasardBetType\n#include "HasardPayoutTable.generated.h"</code></pre> <pre><code>const FHasardPayoutRule* UHasardPayoutTable::FindRule(EHasardBetType BetType) const\n{\n  return Rules.FindByPredicate(\n      [BetType](const FHasardPayoutRule&amp; R){ return R.BetType == BetType; });\n}</code></pre> <p><b>4.</b> Give <code>AHasardGameMode</code> a <code>TObjectPtr&lt;UHasardPayoutTable&gt; PayoutTable;</code> as <code>EditDefaultsOnly</code>, and have <code>ResolveRound</code> read payouts from it rather than any hardcoded value.</p> <p><b>Phase 3 &mdash; build, then author the data.</b></p> <p><b>5.</b> <code>Ctrl+Shift+B</code>, reopen.</p> <p><b>6.</b> Right-click in the Content Browser &rarr; <b>Miscellaneous &rarr; Data Asset</b> &rarr; pick <code>HasardPayoutTable</code> &rarr; name it <code>DA_EuropeanPayouts</code>. Set <code>PocketCount</code> to <b>37</b>.</p> <p><b>7.</b> Add all thirteen rules. Payout ratio and covered numbers:</p> <pre><code>StraightUp  35:1   covers 1      Split   17:1  covers 2\nStreet      11:1   covers 3      Corner   8:1  covers 4\nSixLine      5:1   covers 6      Column   2:1  covers 12\nDozen        2:1   covers 12     Red      1:1  covers 18\nBlack        1:1   covers 18     Even     1:1  covers 18\nOdd          1:1   covers 18     Low      1:1  covers 18\nHigh         1:1   covers 18</code></pre> <p><b>8.</b> Assign <code>DA_EuropeanPayouts</code> to <code>BP_HasardGameMode</code>.</p> <p><b>9.</b> Add a HUD element showing the <b>true odds and house edge</b> of whichever bet spot the player is looking at, read from the data asset.</p> <p><b>10.</b> <b>Verify the claim.</b> Check every bet reports <b>2.70%</b>. If one differs, that row is wrong — the arithmetic is unforgiving, which is exactly why it is worth doing.</p> <p><b>11.</b> Change a payout ratio in the asset and press Play. The display updates with no compile. That gap is the point of the module.</p> <p><b>12.</b> <b>Optional, and worth ten minutes:</b> duplicate the asset as <code>DA_AmericanPayouts</code> and set <code>PocketCount = 38</code>. Same payouts, one extra pocket. Watch every house edge jump to <b>5.26%</b>. You have now demonstrated in data the decision you made in Module 0.</p> <p><b>13.</b> Commit.</p> <pre><code>git add -A\ngit commit -m "Move payouts to a data asset and compute honest odds" -m "Storing CoveredNumbers alongside PayoutRatio lets the game compute true odds and house edge rather than only paying out. Every bet on a European wheel is 2.70 percent, which is the single most useful thing an honest odds display can tell a player."</code></pre>'},
+{t:'srcs',x:[['Data Assets','https://dev.epicgames.com/documentation/en-us/unreal-engine/data-assets-in-unreal-engine'],['Asset Management','https://dev.epicgames.com/documentation/en-us/unreal-engine/asset-management-in-unreal-engine']]}
+],
+quiz:[
+{q:'On a European wheel, comparing a straight-up bet to a red bet:',
+ opts:['They have identical house edges','Red has a lower edge','Straight up has a lower edge','It depends on the payout table'],
+ c:0,why:'2.70% for both. That fact dissolves the premise of betting systems, and almost no commercial product states it.'},
+{q:'DisplayName is FText rather than FString because:',
+ opts:['FText is faster','A player reads it, so it must be localisable — and this project is French-first','FString cannot hold Unicode','Data assets require FText'],
+ c:1,why:'Guide 1 Module 9. In Quebec that is not hypothetical; it is the difference between shipping and rewriting.'},
+{q:'A bundle of related values with many named variants suits:',
+ opts:['A DeveloperSettings class','Individual EditDefaultsOnly properties','A Data Asset','A TMap in the GameMode'],
+ c:2,why:'Data Assets give you designer-editable named instances in the Content Browser.'},
+{q:'Storing CoveredNumbers alongside PayoutRatio lets the game:',
+ opts:['Render the felt automatically','Validate the wheel mesh','Replicate bets more cheaply','Compute and display true odds and the house edge'],
+ c:3,why:'Payout alone cannot tell you the edge. Payout plus probability can — which is what makes an honest display possible.'},
+{q:'Changing PocketCount from 37 to 38 with identical payouts does what to the house edge?',
+ opts:['Roughly doubles it, to 5.26%','Nothing','Halves it','Makes it negative'],
+ c:0,why:'One extra pocket, same payouts. The single most consequential number on the table.'}
+]
+},
+
+/* ---------------------------------------------------------- 13 */
+{
+grp:"Part V — Proving It and Shipping",
+title:"Verifying the wheel, then packaging",
+lede:"An honest-odds display is a claim about the distribution. This module makes you prove the claim, then ship the thing.",
+blocks:[
+{t:'h',x:'The claim you have made'},
+{t:'p',x:'Module 12 puts "1 in 37" and "2.70%" on screen. Both are true <b>only if your wheel actually produces a uniform distribution across 37 pockets.</b> If it does not, the display is a false statement dressed up as transparency — which is worse than saying nothing.'},
+{t:'rg',lab:'This is why the spin-result decision matters',x:'<p>Your project has an open decision: is the winning pocket <b>predetermined</b> and then animated to, or does it <b>emerge from ball physics</b>?</p><p>Predetermined with <code>FMath::RandRange(0, 36)</code> gives a provably uniform distribution, frame-rate independent, testable in seconds. Physics gives a more interesting simulation, but proving uniformity is genuinely hard — real wheels have bias, and a naive sim will have far more.</p><p>Whichever you choose, this module makes you measure it. A claim you have not measured is a guess.</p>'},
+
+{t:'h',x:'Measuring it'},
+{t:'code',x:`// A test function you can call from the console
+UFUNCTION(Exec)
+void HasardTestDistribution(int32 SpinCount);
+
+void AHasardWheel::HasardTestDistribution(int32 SpinCount)
+{
+  TArray<int32> Counts;
+  Counts.Init(0, PocketCount);       // 37 zeroes
+
+  for (int32 i = 0; i < SpinCount; ++i)
+  {
+    const int32 Pocket = DetermineWinningPocket();
+    Counts[Pocket]++;
+  }
+
+  const float Expected = static_cast<float>(SpinCount) / PocketCount;
+
+  for (int32 Pocket = 0; Pocket < PocketCount; ++Pocket)
+  {
+    const float Deviation = (Counts[Pocket] - Expected) / Expected * 100.0f;
+    UE_LOG(LogHasard, Log, TEXT("Pocket %2d: %5d hits (%+.1f%% from expected)"),
+           Pocket, Counts[Pocket], Deviation);
+  }
+}`},
+{t:'p',x:'Run <code>HasardTestDistribution 370000</code> from the console. Each pocket should land near 10,000, and deviations should be small and unsigned — scattered either side of zero rather than clustered.'},
+{t:'chk',q:'You run 370,000 spins and pocket 0 comes up 14,200 times while the rest average 9,880. What have you learned?',a:'That your wheel is biased toward zero by about 44%, and that every odds figure on your HUD is currently a lie. It also tells you <i>where</i> to look: a bias at exactly one end of the range usually means an off-by-one or an inclusive/exclusive bound error in the random call — <code>RandRange</code> is inclusive at both ends, which people routinely get wrong.'},
+{t:'aside',lab:'This is portfolio material',x:'"I displayed the odds, then wrote a test that ran 370,000 spins to confirm the distribution actually matched what I was claiming" is a far stronger thing to say in an interview than any amount of polish. It demonstrates that you understood the display was a <i>claim</i>, not a decoration. For a regulated operator, that instinct is the whole job.'},
+
+{t:'h',x:'Logging and debugging'},
+{t:'code',x:`// In a shared header
+DECLARE_LOG_CATEGORY_EXTERN(LogHasard, Log, All);
+
+// In one .cpp
+DEFINE_LOG_CATEGORY(LogHasard);
+
+// Log values, not milestones
+UE_LOG(LogHasard, Log, TEXT("Settled pocket %d, %d bets, net %+d"),
+       WinningPocket, ActiveBets.Num(), NetChange);`},
+{t:'p',x:'Remember the <code>*</code> on <code>FString</code> arguments — the operator overload from Guide 1 Module 10, not a dereference.'},
+{t:'table',head:['Command','Shows'],rows:[
+['<code>stat fps</code>','Frame rate'],
+['<code>stat unit</code>','Frame time split: Game, Draw, GPU'],
+['<code>showdebug enhancedinput</code>','Active input actions and mappings — fastest input diagnosis'],
+['<code>slomo 0.2</code>','Time dilation — useful for watching the ball settle']]},
+
+{t:'h',x:'Packaging'},
+{t:'p',x:'Do this now, while the project is small. The first package always surfaces problems, and surfacing them on a wheel and three bet spots is far cheaper than on a finished game.'},
+{t:'list',x:[
+'<b>1.</b> <b>Project Settings &rarr; Maps &amp; Modes</b>: set <b>Game Default Map</b>. A packaged build with no default map opens to a black screen — the single most common first-package failure.',
+'<b>2.</b> <b>Project Settings &rarr; Packaging</b>: use <b>Development</b> first. It keeps logging and asserts, so a failure is diagnosable. Switch to <b>Shipping</b> once it works.',
+'<b>3.</b> <b>Platforms &rarr; Windows &rarr; Package Project</b>. Output <b>outside</b> <code>C:\\UE5\\Hasard</code> so build artifacts never reach git.',
+'<b>4.</b> Watch the Output Log. The real error is usually near the first <code>Error:</code> line, not the last.',
+'<b>5.</b> Run the .exe. If you can look at the table, place a bet and see the HUD update, you have shipped something.']},
+{t:'warn',lab:'Keep build output out of the repository',x:'Packaged builds are hundreds of megabytes. Your <code>.gitignore</code> already excludes <code>Binaries/</code>, <code>Intermediate/</code>, <code>Saved/</code> and <code>DerivedDataCache/</code> — but packaging to a folder inside the repo is a fast way to push a very large accidental commit, and with Git LFS configured, an expensive one.'},
+{t:'chk',q:'Your packaged build opens to a black screen. First thing to check?',a:'<b>Game Default Map</b> in Project Settings &rarr; Maps &amp; Modes. In the editor you always open a map manually, so an unset default never shows up until you package.'},
+
+{t:'build',title:'Prove it, then ship it',file:'C:/UE5/Hasard',x:'<p><b>Phase 1 &mdash; Visual Studio: the distribution test.</b></p> <p><b>1.</b> Add an exec function to <code>AHasardWheel</code>:</p> <pre><code>UFUNCTION(Exec)\nvoid HasardTestDistribution(int32 SpinCount);</code></pre> <p><b>2.</b> Implement it as in the lecture, and extract the pocket selection into its own function so the test and real play share one code path:</p> <pre><code>int32 AHasardWheel::DetermineWinningPocket() const\n{\n  return FMath::RandRange(0, PocketCount - 1);\n}</code></pre> <p>If the test calls different code from the game, it proves nothing.</p> <p><b>3.</b> Promote the log category to a shared header so every class uses one: <code>DECLARE_LOG_CATEGORY_EXTERN(LogHasard, Log, All);</code> in <code>HasardTypes.h</code>, <code>DEFINE_LOG_CATEGORY(LogHasard);</code> in exactly one .cpp, and delete the per-file <code>DEFINE_LOG_CATEGORY_STATIC</code> lines.</p> <p><b>Every .cpp that logs then needs <code>#include "HasardTypes.h"</code></b> — the ones that previously defined their own category had no reason to include it. Miss one and it fails to compile on <code>LogHasard</code> being undeclared, which is at least a loud failure. Sweep them in one pass:</p> <pre><code>HasardWheel.cpp  HasardGameMode.cpp  HasardPlayerState.cpp\nHasardPlayerController.cpp  HasardPlayerPawn.cpp\nHasardBettingComponent.cpp  HasardBankrollComponent.cpp\nHasardBetSpot.cpp  HasardInteractionComponent.cpp</code></pre> <p><b>Phase 2 &mdash; build and measure.</b></p> <p><b>4.</b> <code>Ctrl+Shift+B</code>, reopen, Play, and open the console with <b>~</b>. Run:</p> <pre><code>HasardTestDistribution 370000</code></pre> <p><b>5.</b> Each pocket should land near <b>10,000</b>, with deviations small and scattered either side of zero rather than clustered. Save the output into <code>docs/distribution-test.md</code> — that log is evidence, and evidence is what a regulated operator cares about.</p> <p><b>6.</b> <b>If it is not flat, stop and fix it.</b> Your HUD is currently making a claim you cannot support. Bias at exactly one end of the range almost always means an inclusive/exclusive bounds error: <code>RandRange</code> is inclusive at <i>both</i> ends, so <code>RandRange(0, PocketCount)</code> would give 38 outcomes on a 37-pocket wheel.</p> <p><b>Phase 3 &mdash; package.</b></p> <p><b>7.</b> <b>Project Settings &rarr; Maps &amp; Modes</b>: confirm <b>Game Default Map</b> is <code>L_RouletteTest</code>. Unset is the most common reason a packaged build opens to a black screen.</p> <p><b>8.</b> <b>Project Settings &rarr; Packaging</b>: set Build Configuration to <b>Development</b> for the first attempt — it keeps logging and asserts, so a failure is diagnosable.</p> <p><b>9.</b> <b>Platforms &rarr; Windows &rarr; Package Project</b>. Output to <code>C:/Builds/Hasard/</code> — <b>outside the repo</b>.</p> <p><b>10.</b> Watch the Output Log. The real error is usually near the <b>first</b> <code>Error:</code> line, not the last.</p> <p><b>11.</b> Run the .exe. Look at the table, place a bet, spin, watch the HUD.</p> <p><b>12.</b> Fix whatever broke — something will have. Repackage in <b>Shipping</b>.</p> <p><b>13.</b> Commit and tag.</p> <pre><code>git add -A\ngit commit -m "Add spin distribution test; package first playable build"\ngit tag v0.1-playable\ngit push --tags</code></pre> <p>You now have a packaged roulette table with responsible-gaming mechanics and a measurement backing its odds display. That is a portfolio piece.</p>'},
+{t:'srcs',x:[['Packaging and Cooking Games','https://dev.epicgames.com/documentation/en-us/unreal-engine/packaging-and-cooking-games-in-unreal-engine'],['Logging in Unreal Engine','https://dev.epicgames.com/documentation/en-us/unreal-engine/logging-in-unreal-engine'],['Asserts','https://dev.epicgames.com/documentation/en-us/unreal-engine/asserts-in-unreal-engine']]}
+],
+quiz:[
+{q:'Why must you measure the distribution before shipping the odds display?',
+ opts:['For the packaging step to succeed','Because the display is a claim, and an unmeasured claim may be false','To improve frame rate','Unreal requires it'],
+ c:1,why:'A false transparency claim is worse than no claim. This is the single strongest thing in the project.'},
+{q:'A packaged build opens to a black screen. Check:',
+ opts:['GPU drivers','Collision presets','The Shipping configuration','Game Default Map'],
+ c:3,why:'Invisible in the editor because you always open a map manually.'},
+{q:'Which configuration should you package first?',
+ opts:['Development, because it keeps logging and asserts','Debug','Shipping, to test the real thing','It makes no difference'],
+ c:0,why:'If the first package fails, Development lets you see why.'},
+{q:'A distribution test shows pocket 0 hit 44% more often than the rest. The most likely cause is:',
+ opts:['Frame rate variance','Not enough spins','An inclusive/exclusive bound error in the random call','A GPU driver issue'],
+ c:2,why:'Bias at exactly one end of the range points at bounds. RandRange is inclusive at both ends, which is routinely misremembered.'},
+{q:'Packaged builds should output to:',
+ opts:['A folder outside the repository','Inside the project folder for convenience','The Content folder','The Saved folder'],
+ c:0,why:'Hundreds of megabytes inside a repo with Git LFS configured is an expensive accident.'}
+]
+},
+
+/* ---------------------------------------------------------- 14 */
+{
+grp:"Assessment",
+title:"Final Exam, and the Road to Guide 3",
+lede:"Fifteen questions across the course, then a map of everything deliberately left out and where it lives.",
+blocks:[
+{t:'h',x:'What you should have'},
+{t:'list',x:[
+'A wheel that spins and broadcasts which pocket the ball settled in',
+'A felt whose bet squares you can look at and click, via a trace and an interface',
+'A betting component holding active bets, coupled safely to a bankroll that cannot go negative',
+'A HUD showing balance, total staked, session net change and elapsed time — permanently, not behind a menu',
+'A reality check that interrupts and suppresses input until dismissed',
+'A payout table in data, from which true odds and the house edge are computed and displayed honestly',
+'A distribution test proving the odds display is not lying',
+'A packaged, runnable build, tagged in git']},
+{t:'p',x:'That is a complete vertical slice with a defensible point of view. Everything after this is depth in one direction.'},
+
+{t:'h',x:'Deliberately excluded — and where it lives'},
+{t:'table',head:['Topic','Why it was cut','Epic docs entry point'],rows:[
+['<b>VR</b>','The layer that goes on top once the rules, interaction and UI are solid. Roughly 80% of what you built carries over.','XR Development'],
+['<b>Networking / replication</b>','Doubles the complexity of every system. Only worth it for multiplayer.','Networking and Multiplayer'],
+['<b>Gameplay Ability System</b>','Large and opinionated; overkill for a table game.','Gameplay Ability System'],
+['<b>AI</b>','No agents in this project. Needs the <code>AIModule</code> dependency from Guide 1, Module 11.','Artificial Intelligence'],
+['<b>Save systems</b>','Session persistence across launches — the natural next step for a responsible-gaming product.','Saving and Loading Your Game'],
+['<b>Subsystems</b>','The clean modern answer to "where does manager code go". Nearly made the cut.','Programming Subsystems'],
+['<b>Ball physics</b>','A whole discipline, and coupled to your open spin-result decision.','Physics'],
+['<b>Animation programming</b>','Anim Blueprints, state machines, montages.','Skeletal Mesh Animation System'],
+['<b>Profiling</b>','Unreal Insights. Needs a game slow enough to profile.','Testing and Optimizing Your Content']]},
+{t:'aside',lab:'Suggested order for Guide 3',x:'<b>Subsystems</b> first — small, immediately useful, and it answers the "where does this go" question that starts biting around now. Then <b>save systems</b>, which naturally uses one and which a responsible-gaming product genuinely needs: session limits mean nothing if closing the game resets them. Then <b>VR</b>, since that was the long-term aim and the foundation is now in place. Leave networking and GAS until a specific design demands them.'},
+{t:'rg',lab:'One thing to carry into Guide 3',x:'Session limits that reset when the application closes are not limits. The moment you add persistence, the responsible-gaming mechanics stop being a demonstration and start being real — which is also the moment they become genuinely harder to design. That is the interesting problem waiting for you, and it is worth arriving at deliberately rather than by accident.'}
+],
+quiz:[
+{q:'Live Coding is appropriate when you have changed:',
+ opts:['A header, adding a UPROPERTY','A function body in a .cpp','A new class','Hasard.Build.cs'],
+ c:1,why:'Bodies only. Anything touching class layout or reflection needs a full build with the editor closed. [Module 0]'},
+{q:'<code>HasardWheel.generated.h</code> must be:',
+ opts:['The first include','Omitted in UE5','The last include','Inside the class body'],
+ c:2,why:'Errors reported inside the generated file usually mean something was included below it. [Module 1]'},
+{q:'Which stage may NOT touch the world?',
+ opts:['The constructor','BeginPlay','PostInitializeComponents','Tick'],
+ c:0,why:'The CDO is constructed at engine startup with no level loaded. [Modules 1, 4]'},
+{q:'The player\'s bankroll belongs on:',
+ opts:['The Pawn','The GameMode','The Wheel','The PlayerState'],
+ c:3,why:'Per-player data that must outlive the pawn. Money on a destructible actor deletes balances. [Module 3]'},
+{q:'Placing a bet binds to which Enhanced Input trigger event?',
+ opts:['Triggered','Ongoing','Started','Completed'],
+ c:2,why:'Started fires once per press; Triggered would fire every tick and empty the bankroll. [Module 6]'},
+{q:'Your component does not appear in the editor Add Component list. Missing:',
+ opts:['meta=(BlueprintSpawnableComponent)','ClassGroup','A UPROPERTY','Blueprintable'],
+ c:0,why:'Without it the class is C++-usable but not offered to designers. [Module 7]'},
+{q:'A trace never hits a placed bet spot. First check:',
+ opts:['Actor mobility','The collision preset','Trace distance','The trace channel enum'],
+ c:1,why:'NoCollision and OverlapAll will not produce a blocking hit. [Module 8]'},
+{q:'Removing losing bets while looping forwards through ActiveBets:',
+ opts:['Is safe','Throws an exception','Reallocates the array','Skips elements as later items shift down'],
+ c:3,why:'Iterate backwards by index when removing. Some losers survive and some winners never pay. [Module 9]'},
+{q:'A delegate callback compiles but never fires. Most likely:',
+ opts:['It is not virtual','It is missing UFUNCTION()','The delegate is not multicast','You bound in BeginPlay'],
+ c:1,why:'Dynamic delegates resolve by name through reflection. [Modules 2, 10]'},
+{q:'Staking 100 and winning 40 back must present as:',
+ opts:['Neutral','A win of 40','A win with a smaller animation','A net loss of 60'],
+ c:3,why:'Celebrating the credit while hiding the cost is a loss disguised as a win. [Modules 10, 11]'},
+{q:'On a European wheel, the house edge on a straight-up bet versus a red bet is:',
+ opts:['Lower on straight up','Dependent on the payout table','Identical, at 2.70%','Lower on red'],
+ c:2,why:'Every bet on the table. That fact dissolves the premise of betting systems. [Module 12]'},
+{q:'Adding a 38th pocket while keeping the same payouts:',
+ opts:['Roughly doubles the house edge to 5.26%','Has no effect on the edge','Halves the house edge','Makes the game fairer'],
+ c:0,why:'The single most consequential number on the table, and the reason this project uses a European wheel. [Modules 0, 12]'},
+{q:'Why run a 370,000-spin distribution test?',
+ opts:['Unreal requires it before packaging','Because the odds display is a claim, and an unmeasured claim may be false','To warm the shader cache','To measure frame rate'],
+ c:1,why:'Displaying odds you have not verified is false transparency, which is worse than silence. [Module 13]'},
+{q:'A packaged build opens to a black screen. Check:',
+ opts:['Shipping configuration','Collision presets','Game Default Map','The GameMode constructor'],
+ c:2,why:'Invisible in the editor, because you always open a map manually. [Module 13]'},
+{q:'Which was deliberately excluded, and why?',
+ opts:['VR, because it is a layer that goes on once the rules and UI are solid','Collision, because Blueprint handles it','Containers, because they are rarely used','Enhanced Input, because it is deprecated'],
+ c:0,why:'Roughly 80% of what you built carries over unchanged. VR is the next guide, not the foundation. [Module 14]'}
+]
+}
+
+];
+
+/* ============================================================
+   RENDER ENGINE
+   ============================================================ */
+const done = new Set();
+let cur = 0;
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const TOKENS = new RegExp([
+  '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)',
+  '("[^"\\n]*")',
+  '\\b(UPROPERTY|UFUNCTION|UCLASS|USTRUCT|UENUM|UINTERFACE|UMETA|GENERATED_BODY|UE_LOG|' +
+    'DEFINE_LOG_CATEGORY_STATIC|DEFINE_LOG_CATEGORY|DECLARE_LOG_CATEGORY_EXTERN|' +
+    'DECLARE_DYNAMIC_MULTICAST_DELEGATE(?:_\\w+)?|DECLARE_DELEGATE(?:_\\w+)?|TEXT|' +
+    'check|ensure(?:Always)?)\\b',
+  '\\b(class|struct|enum|void|float|double|bool|const|public|private|protected|if|else|' +
+    'for|while|return|new|static|virtual|override|template|namespace|true|false|nullptr|' +
+    'this|int32|uint8|int16|uint16|string)\\b',
+  '\\b([UAFTIEG][A-Z]\\w*)\\b'
+].join('|'), 'g');
+
+function hi(code){
+  return esc(code).replace(TOKENS, (m, cm, st, mc, kw, ty) => {
+    const cls = cm ? 'cm' : st ? 'st' : mc ? 'mc' : kw ? 'kw' : ty ? 'ty' : null;
+    return cls ? '<span class="' + cls + '">' + m + '</span>' : m;
+  });
+}
+
+function buildNav(){
+  const nav = document.getElementById('nav');
+  let html = '', lastGrp = '';
+  COURSE.forEach((m,i)=>{
+    if(m.grp !== lastGrp){ html += '<div class="grp">'+m.grp+'</div>'; lastGrp = m.grp; }
+    html += '<button data-i="'+i+'"><span class="n">'+String(i).padStart(2,'0')+'</span>'+m.title+'<span class="dot">&#10003;</span></button>';
+  });
+  nav.innerHTML = html;
+  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.i));
+}
+
+function refreshNav(){
+  document.querySelectorAll('#nav button').forEach(b=>{
+    const i = +b.dataset.i;
+    b.classList.toggle('on', i===cur);
+    b.classList.toggle('done', done.has(i));
+  });
+  const pct = Math.round(done.size/COURSE.length*100);
+  document.querySelector('#prog>i').style.width = pct+'%';
+  document.getElementById('progtxt').textContent =
+    done.size+' of '+COURSE.length+' modules complete'+(done.size===COURSE.length?'  — course finished':'');
+}
+
+function renderBlocks(bl){
+  return bl.map(b=>{
+    switch(b.t){
+      case 'h': return '<h3>'+b.x+'</h3>';
+      case 'p': return '<p>'+b.x+'</p>';
+      case 'code': return '<pre><code>'+hi(b.x)+'</code></pre>';
+      case 'aside': return '<div class="aside"><div class="lab">'+(b.lab||'Why it works')+'</div>'+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'warn': return '<div class="warn"><div class="lab">'+(b.lab||'Careful')+'</div>'+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'rg': return '<div class="rg"><div class="lab">'+(b.lab||'Responsible gaming')+'</div>'+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'build': return '<div class="build"><div class="lab">&#9654; Build &mdash; '+b.title+'</div>'+
+        (b.file?'<div class="file">'+b.file+'</div>':'')+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'srcs': return '<div class="srcs"><div class="lab">Epic documentation for this module</div>'+
+        b.x.map(s=>'<a href="'+s[1]+'" target="_blank" rel="noopener">'+s[0]+'</a>').join('')+'</div>';
+      case 'list': return '<ul>'+b.x.map(li=>'<li>'+li+'</li>').join('')+'</ul>';
+      case 'table': return '<table><thead><tr>'+b.head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+        b.rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+      case 'chk': return '<div class="chk"><div class="lab">Check yourself</div><p class="q">'+b.q+'</p>'+
+        '<button onclick="this.parentNode.classList.add(\'open\')">Reveal answer</button>'+
+        '<div class="ans">'+b.a+'</div></div>';
+    }
+    return '';
+  }).join('');
+}
+
+function renderQuiz(m, idx){
+  const isExam = idx === COURSE.length-1;
+  let h = '<div class="quiz"><h4>'+(isExam?'Final Examination':'Module '+idx+' Quiz')+'</h4>'+
+    '<p class="hint">'+m.quiz.length+' questions. Pick one answer per question; reasoning appears immediately.</p>';
+  m.quiz.forEach((q,qi)=>{
+    h += '<div class="qi" data-q="'+qi+'"><p class="qt"><span class="num">Q'+(qi+1)+'</span>'+q.q+'</p>';
+    q.opts.forEach((o,oi)=>{ h += '<button class="opt" data-q="'+qi+'" data-o="'+oi+'">'+o+'</button>'; });
+    h += '<div class="why" data-why="'+qi+'"></div></div>';
+  });
+  h += '<div class="score" id="score"></div></div>';
+  return h;
+}
+
+function go(i){
+  cur = i;
+  const m = COURSE[i];
+  const isExam = i === COURSE.length-1;
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="kicker">'+(isExam?'Assessment':'Module '+i)+' &middot; '+m.grp+'</div>'+
+    '<h2 class="title">'+m.title+'</h2>'+
+    '<p class="lede">'+m.lede+'</p>'+
+    renderBlocks(m.blocks)+
+    renderQuiz(m,i)+
+    '<div class="pager">'+
+      '<button id="prev" '+(i===0?'disabled':'')+'>&larr; Previous</button>'+
+      '<button id="next" class="primary" '+(i===COURSE.length-1?'disabled':'')+'>Next module &rarr;</button>'+
+    '</div>';
+  window.scrollTo(0,0);
+
+  const answered = {}; let correct = 0;
+  main.querySelectorAll('.opt').forEach(btn=>{
+    btn.onclick = ()=>{
+      const qi = +btn.dataset.q, oi = +btn.dataset.o;
+      if(answered[qi]!==undefined) return;
+      answered[qi] = oi;
+      const q = m.quiz[qi];
+      main.querySelectorAll('.opt[data-q="'+qi+'"]').forEach(b=>{
+        b.disabled = true;
+        if(+b.dataset.o === q.c) b.classList.add('right');
+        else if(+b.dataset.o === oi) b.classList.add('wrong');
+      });
+      if(oi === q.c) correct++;
+      const why = main.querySelector('.why[data-why="'+qi+'"]');
+      why.innerHTML = (oi===q.c?'<b>Correct.</b> ':'<b>Not quite.</b> ')+q.why;
+      why.classList.add('show');
+      if(Object.keys(answered).length === m.quiz.length){
+        const sc = document.getElementById('score');
+        const pct = Math.round(correct/m.quiz.length*100);
+        let verdict;
+        if(isExam) verdict = correct>=12 ? ' — pass. Go package the build.' : ' — below the pass mark of 12. Revisit the modules named above.';
+        else verdict = pct===100 ? ' — clean sweep.' : pct>=60 ? ' — solid. Reread what you missed, then do the Build step.' : ' — reread this module before building.';
+        sc.innerHTML = '<b>Score: '+correct+' / '+m.quiz.length+' ('+pct+'%)</b>'+verdict;
+        sc.classList.add('show');
+        done.add(i); refreshNav();
+      }
+    };
+  });
+  const p = document.getElementById('prev'), n = document.getElementById('next');
+  if(p) p.onclick = ()=>go(i-1);
+  if(n) n.onclick = ()=>go(i+1);
+  refreshNav();
+}
+
+buildNav(); go(0);
+</script>
+</body>
+</html>

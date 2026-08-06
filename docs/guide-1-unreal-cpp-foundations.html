@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAME 301 — Unreal Engine C++ Foundations</title>
+<style>
+:root{
+  --bg:#0e1117; --panel:#151a23; --panel2:#1b212c; --line:#252c39;
+  --text:#dfe5ee; --dim:#93a0b4; --accent:#5aa9ff; --accent2:#8b7cff;
+  --good:#3ddc97; --bad:#ff6b6b; --warn:#ffc857;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+a{color:var(--accent)}
+#wrap{display:flex;min-height:100vh}
+/* ---- sidebar ---- */
+#side{width:290px;flex:0 0 290px;background:var(--panel);border-right:1px solid var(--line);
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 0}
+#side h1{font-size:15px;margin:0 20px 2px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+#side .sub{font-size:12px;color:var(--dim);margin:0 20px 18px}
+#prog{margin:0 20px 16px;height:6px;background:var(--panel2);border-radius:6px;overflow:hidden}
+#prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+#progtxt{font-size:11px;color:var(--dim);margin:0 20px 14px}
+nav button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--dim);
+  font:inherit;font-size:13.5px;padding:8px 20px 8px 20px;cursor:pointer;border-left:3px solid transparent}
+nav button:hover{color:var(--text);background:var(--panel2)}
+nav button.on{color:var(--text);border-left-color:var(--accent);background:var(--panel2)}
+nav button .n{color:var(--dim);font-family:var(--mono);font-size:11px;margin-right:8px}
+nav button .dot{float:right;color:var(--good);font-size:12px;opacity:0}
+nav button.done .dot{opacity:1}
+nav .grp{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5b6779;margin:18px 20px 6px}
+/* ---- main ---- */
+#main{flex:1;min-width:0;padding:46px 56px 120px;max-width:900px}
+.kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+h2.title{font-size:31px;line-height:1.2;margin:6px 0 6px;letter-spacing:-.01em}
+.lede{color:var(--dim);font-size:15px;margin:0 0 30px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+h3{font-size:19px;margin:34px 0 10px;letter-spacing:-.01em}
+p{margin:0 0 14px}
+ul{margin:0 0 14px;padding-left:22px}li{margin:6px 0}
+code{font-family:var(--mono);font-size:.87em;background:var(--panel2);padding:1px 5px;border-radius:4px;color:#c8d6ea}
+pre{background:#0a0d13;border:1px solid var(--line);border-left:3px solid var(--accent2);
+  padding:14px 16px;border-radius:7px;overflow-x:auto;margin:0 0 16px}
+pre code{background:none;padding:0;font-size:13px;line-height:1.6;color:#cdd8e8}
+.cm{color:#5e6b7f;font-style:italic}
+.kw{color:#c792ea}.ty{color:#82d2ff}.st{color:#c3e88d}.mc{color:#ffcb6b}
+/* callouts */
+.aside{background:linear-gradient(180deg,#16203055,#151a23);border:1px solid #23324a;
+  border-radius:9px;padding:14px 18px;margin:0 0 18px}
+.aside .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;font-weight:600}
+.aside p:last-child{margin-bottom:0}
+.warn{background:#231c10;border:1px solid #4a3a18;border-radius:9px;padding:14px 18px;margin:0 0 18px}
+.warn .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--warn);margin-bottom:6px;font-weight:600}
+.warn p:last-child{margin-bottom:0}
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:14px}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--panel2);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+/* check-yourself */
+.chk{border:1px solid #2c3a52;background:#131a26;border-radius:9px;padding:15px 18px;margin:0 0 18px}
+.chk .lab{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:7px}
+.chk .q{margin:0 0 12px}
+.chk button{background:none;border:1px solid #3a4a66;color:var(--accent);font:inherit;font-size:13px;
+  padding:5px 13px;border-radius:6px;cursor:pointer}
+.chk button:hover{background:#1b2434}
+.chk .ans{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #2c3a52;color:#cbd6e6;font-size:15px}
+.chk.open .ans{display:block}.chk.open button{display:none}
+/* quiz */
+.quiz{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:24px 26px;margin:36px 0 0}
+.quiz h4{margin:0 0 4px;font-size:17px}
+.quiz .hint{color:var(--dim);font-size:13px;margin:0 0 20px}
+.qi{margin:0 0 22px;padding:0 0 18px;border-bottom:1px solid var(--line)}
+.qi:last-of-type{border-bottom:0}
+.qi .qt{font-weight:600;margin:0 0 11px}
+.qi .qt .num{font-family:var(--mono);color:var(--accent);font-size:13px;margin-right:8px}
+.opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);
+  color:var(--text);font:inherit;font-size:14.5px;padding:10px 14px;border-radius:7px;margin:0 0 8px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:#3e5170}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:#12261f;color:#bff3dc}
+.opt.wrong{border-color:var(--bad);background:#2a1517;color:#ffc9c9}
+.why{display:none;font-size:14px;color:#b9c6d8;background:#101722;border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:7px;padding:11px 14px;margin-top:6px}
+.why.show{display:block}
+.score{margin-top:8px;padding:14px 16px;border-radius:8px;background:var(--panel2);font-size:14.5px;display:none}
+.score.show{display:block}
+/* footer nav */
+.pager{display:flex;justify-content:space-between;gap:14px;margin-top:48px;padding-top:26px;border-top:1px solid var(--line)}
+.pager button{background:var(--panel2);border:1px solid var(--line);color:var(--text);font:inherit;font-size:14px;
+  padding:11px 20px;border-radius:8px;cursor:pointer}
+.pager button:hover{border-color:var(--accent);color:var(--accent)}
+.pager button:disabled{opacity:.3;cursor:default}
+.pager button.primary{background:var(--accent);color:#08111e;border-color:var(--accent);font-weight:600}
+.tag{display:inline-block;font-size:11px;font-family:var(--mono);color:var(--dim);border:1px solid var(--line);
+  padding:2px 8px;border-radius:20px;margin-right:6px}
+@media(max-width:900px){
+  #wrap{flex-direction:column}
+  #side{width:100%;flex:none;height:auto;position:static}
+  #main{padding:28px 20px 80px}
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <aside id="side">
+    <h1>GAME 301</h1>
+    <p class="sub">Unreal Engine C++ Foundations<br>after Tom Looman's Complete Guide</p>
+    <div id="prog"><i></i></div>
+    <p id="progtxt">0 of 0 modules complete</p>
+    <nav id="nav"></nav>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ============================================================
+   COURSE DATA
+   block types: h, p, code, aside, warn, list, table, chk
+   ============================================================ */
+const COURSE = [
+
+/* ---------------------------------------------------------- 0 */
+{
+grp:"Orientation",
+title:"Syllabus & the C++ / Blueprint Question",
+lede:"What this course is, how to take it, and the single most argued-about decision in Unreal development.",
+blocks:[
+{t:'h',x:'How this course works'},
+{t:'p',x:'Fourteen modules, each one lecture followed by a scored quiz. Scattered through the lecture text are <b>Check Yourself</b> boxes — one question, answer hidden until you commit. Do not peek. The value of a retrieval prompt collapses the instant you read the answer before attempting it.'},
+{t:'p',x:'A module counts as complete when you finish its quiz. There is a final exam at the end drawing from everything.'},
+{t:'p',x:'Prerequisite check: you should already know what a class is, what inheritance is, and roughly what a pointer is in standard C++. This course teaches what Unreal does <i>on top of</i> C++ — the parts that look strange even to people who know the language.'},
+
+{t:'h',x:'C++ vs. Blueprints'},
+{t:'p',x:'The community treats this as a loyalty test. It is not. Looman\'s position, and the professional consensus, is that they are two layers of one system:'},
+{t:'list',x:[
+'<b>C++ is your framework.</b> Ability systems, inventories, attributes, interaction, save systems, damage pipelines. The load-bearing structure.',
+'<b>Blueprint is your content scripting.</b> This specific fireball: its damage number, its particle, its sound, its cooldown. Small assets built on top of the framework.']},
+{t:'p',x:'Looman is explicit about his own mistake here: going all-in on C++ early made his code <i>more rigid than it needed to be</i> and locked out anyone without C++ knowledge from making adjustments. That is a design failure, not a purity win.'},
+{t:'aside',lab:'Why it works this way',x:'The split is not stylistic — it falls out of how the engine loads things. <b>Every C++ class in your game module is loaded into memory at startup, always.</b> Blueprints are assets: they load when something references them, and they drag every asset they reference along with them. So C++ is the right home for things that are always needed anyway, and Blueprint is the right home for things that should load per-level, per-character, per-situation. You will see this same fact resurface in Module 5 (Casting), where it explains why a single Blueprint cast node can balloon your memory footprint.'},
+{t:'chk',q:'You are building the health/damage/attribute component that every character in your game will use. C++ or Blueprint?',a:'<b>C++.</b> It is framework — always loaded, needed by everything, performance-sensitive, and you want it stable. You would then expose it with <code>BlueprintCallable</code> and a <code>BlueprintAssignable</code> delegate so designers can react to health changes from Blueprint without touching your code.'},
+{t:'chk',q:'And the "Fireball" ability — 40 damage, 3 second cooldown, this Niagara system, that sound cue?',a:'<b>Blueprint.</b> It is a leaf: a configuration of the framework, referencing heavy assets, likely to be tweaked fifty times, and possibly by someone who does not write C++. Making it a C++ class buys you nothing and costs a recompile per tweak.'},
+
+{t:'h',x:'A note on your project'},
+{t:'p',x:'Everything here applies directly to a small solo project. Use a project prefix from day one (Module 8), and write your notes in your own words as you go — recall beats rereading by a wide margin.'}
+],
+quiz:[
+{q:'By Looman\'s own account, what went wrong when he did "pretty much everything" in C++ early on?',
+ opts:['The game ran measurably slower than a Blueprint equivalent','Unreal refused to expose most of his classes to the editor','Compile times became so long the project was unshippable','His code became rigid and removed flexibility for non-programmers to adjust things'],
+ c:3,why:'Performance was never the problem — C++ wins there. The cost was structural: everything had to route through a programmer, and the code resisted change.'},
+{q:'Which of these is the best candidate for a C++ base rather than a pure Blueprint?',
+ opts:['The exact colour and duration of a hit-flash on one enemy','A generic interaction system every actor in the world can opt into','The layout of one particular main-menu widget','A one-off scripted door that opens when a specific level starts'],
+ c:1,why:'Systems that many things depend on belong in C++. One-off, asset-heavy, tweak-often content belongs in Blueprint.'},
+{q:'True or false: Blueprint can do everything C++ can, just more slowly.',
+ opts:['True — it is a complete 1:1 mapping','True, except for multiplayer','False — plenty of engine functionality is simply never exposed to Blueprint','False — Blueprint is actually faster at runtime'],
+ c:2,why:'Not every engine feature is reflected out to Blueprint. Some things genuinely require C++, which is a large part of why learning it "unlocks the full potential of the engine".'}
+]
+},
+
+/* ---------------------------------------------------------- 1 */
+{
+grp:"Part I — Syntax & Symbols",
+title:"Pointers: the asterisk, and when not to check it",
+lede:"Pointers in gameplay code are less frightening than in general C++ — the engine does most of the memory management. But the discipline around null is where beginners actually get hurt.",
+blocks:[
+{t:'h',x:'What a pointer buys you'},
+{t:'p',x:'A pointer holds an address — a place in memory. Two uses dominate gameplay code: <b>pointing at object instances</b> (the player, an actor in the level, a component) and <b>pointing at assets</b> (a sound, a mesh, a Niagara system).'},
+{t:'code',x:`// Get pointer to player controller. Points to somewhere in memory
+// containing all data about the object.
+APlayerController* PC = GetWorld()->GetPlayerController();`},
+{t:'p',x:'Nothing was created and nothing was copied. You looked up where an existing object lives and can now call its functions and read its variables.'},
+
+{t:'h',x:'Null checks — and the more important skill of omitting them'},
+{t:'p',x:'Calling a function through a pointer that points at nothing crashes the engine. So you check:'},
+{t:'code',x:`AActor* FocusedActor = GetFocusedInteractionActor();
+if (FocusedActor != nullptr)
+{
+  FocusedActor->Interact();
+}
+
+// shorthand — a pointer converts to bool
+if (FocusedActor)
+{
+  FocusedActor->Interact();
+}`},
+{t:'warn',lab:'The lesson most tutorials skip',x:'<p>Looman: <i>"Perhaps even more important than knowing when to check for nullptr, is when NOT to include nullptr checks."</i></p><p>Check for null only when null is a <b>legitimate, expected state</b> that the game should survive. In the example above, there is genuinely no focused actor most of the time — the check is correct.</p><p>Now consider <code>GetPlayerController()</code> returning null mid-game. That is not a valid state of the game; something is deeply broken. If you wrap it in a silent <code>if</code>, the item never enters the inventory, nothing is logged, and you spend an evening wondering why pickups stopped working. Better to crash loudly, or at minimum <code>ensure()</code> (Module 14), and be told immediately.</p>'},
+{t:'p',x:'The rule of thumb: <b>a null check is a statement that null is normal here.</b> If null is not normal, do not write one — write an assert.'},
+{t:'chk',q:'Is forward-thinking "defensive programming" — wrapping every pointer use in an if-check — good practice in Unreal?',a:'<b>No.</b> Blanket null checks convert loud, findable bugs into silent, invisible ones. You have not prevented the bug; you have hidden it and deferred the cost to a much more expensive debugging session later. Check where null is expected; assert where it is not.'},
+
+{t:'h',x:'Creating things: constructor vs. runtime'},
+{t:'p',x:'A pointer declared in a header is <code>nullptr</code> until something assigns it. For components, that assignment happens in the constructor:'},
+{t:'code',x:`// Header
+UPROPERTY(VisibleAnywhere)
+UCameraComponent* CameraComp;
+
+// Constructor (.cpp) — CreateDefaultSubobject is ONLY valid here
+CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
+CameraComp->SetupAttachment(SpringArmComp);`},
+{t:'table',head:['Situation','Function'],rows:[
+['New component, inside a constructor','<code>CreateDefaultSubobject&lt;T&gt;()</code>'],
+['New UObject, outside a constructor','<code>NewObject&lt;T&gt;()</code>'],
+['New Actor spawned into the world','<code>GetWorld()-&gt;SpawnActor&lt;T&gt;()</code>']]},
+{t:'chk',q:'You want to spawn a projectile when the player fires. Which of the three above?',a:'<code>GetWorld()->SpawnActor&lt;T&gt;()</code>. It is an Actor and it needs to physically exist in the world. <code>CreateDefaultSubobject</code> would be flatly wrong — it is only legal during construction and would assert.'},
+
+{t:'h',x:'TObjectPtr&lt;T&gt; — the UE5 standard'},
+{t:'p',x:'UE5 introduced <code>TObjectPtr&lt;T&gt;</code> to replace raw pointers in <b>header member properties</b>:'},
+{t:'code',x:`UPROPERTY(VisibleAnywhere)
+TObjectPtr<UCameraComponent> CameraComp;`},
+{t:'p',x:'Three things to fix in your head:'},
+{t:'list',x:[
+'The benefits are <b>editor-only</b> — they support systems like virtualized assets and lazy loading. In a shipped build it compiles down to a raw pointer and behaves identically.',
+'It is for <b>header member properties only</b>. Local variables inside a <code>.cpp</code> function stay raw pointers; there is no benefit in short-lived scope.',
+'Raw pointers still work. Epic advises moving over where you can; it is a convention, not a hard break.']},
+{t:'chk',q:'Does switching a header from UCameraComponent* to TObjectPtr&lt;UCameraComponent&gt; make your shipped game faster?',a:'<b>No.</b> In a shipping build it is functionally identical to a raw pointer. The gains are editor-side tooling gains — asset virtualisation, access tracking, lazy load. Do it for forward compatibility with Epic\'s systems, not for frame time.'},
+
+{t:'h',x:'Pointers to assets'},
+{t:'p',x:'The same syntax points at content rather than world instances. The difference is <i>who assigns it</i> — not the constructor, but a human in the editor, which is what <code>EditAnywhere</code> is for:'},
+{t:'code',x:`/* Particle System played during attack animation */
+UPROPERTY(EditAnywhere, Category = "Attack")
+TObjectPtr<UNiagaraSystem> CastingEffect;`},
+{t:'p',x:'This is <code>nullptr</code> until a designer drags an asset into that slot in the details panel. Note that many engine spawn functions already null-check their asset argument internally, so an unassigned effect is often a no-op rather than a crash.'}
+],
+quiz:[
+{q:'After <code>APlayerController* PC = GetWorld()->GetPlayerController();</code>, how many player controllers exist?',
+ opts:['Two — the original and the copy in PC','One — PC just holds its address','One, but the original is now unreachable','Depends on whether PC is a UPROPERTY'],
+ c:1,why:'Assigning a pointer copies an address, not an object. Nothing was constructed or duplicated.'},
+{q:'When SHOULD you write an <code>if (Ptr)</code> guard?',
+ opts:['Around every pointer use, always','Only for pointers marked UPROPERTY','Only in shipping builds','Only when null is an expected, survivable state at that point'],
+ c:3,why:'A null check declares "null is normal here". Where null means the game is broken, a silent guard hides the failure instead of surfacing it.'},
+{q:'You need to create a UStaticMeshComponent for your actor. You are inside the constructor. Which call?',
+ opts:['NewObject&lt;UStaticMeshComponent&gt;()','SpawnActor&lt;UStaticMeshComponent&gt;()','CreateDefaultSubobject&lt;UStaticMeshComponent&gt;("MeshComp")','new UStaticMeshComponent()'],
+ c:2,why:'CreateDefaultSubobject is the constructor-only path for components. NewObject is for UObjects created at runtime; SpawnActor is for Actors; raw <code>new</code> is never how you make UObjects.'},
+{q:'Where does <code>TObjectPtr&lt;T&gt;</code> belong?',
+ opts:['Only on member properties in header files','Everywhere a raw pointer appears, including local .cpp variables','Only inside function bodies','Only on pointers to assets, never to components'],
+ c:0,why:'Header members, typically UPROPERTY-marked. Locals in .cpp gain nothing from it and should stay raw.'},
+{q:'A designer never assigned the <code>CastingEffect</code> Niagara asset. What is that pointer at runtime?',
+ opts:['A default empty particle system','The engine\'s fallback effect','nullptr','A compile error'],
+ c:2,why:'Unassigned asset pointers are simply null. Whether that crashes depends on whether the consuming function guards it — several engine spawn helpers do.'}
+]
+},
+
+/* ---------------------------------------------------------- 2 */
+{
+grp:"Part I — Syntax & Symbols",
+title:"Dot, Arrow, and Double Colon",
+lede:"Three access operators. Which one you use tells a reader what kind of thing they are looking at.",
+blocks:[
+{t:'h',x:'. versus ->'},
+{t:'p',x:'Both mean "reach into this thing and get a member". The difference is what you are holding:'},
+{t:'list',x:[
+'<code>.</code> on <b>value types</b> — structs you hold directly: <code>FVector</code>, <code>FRotator</code>, <code>FHitResult</code>.',
+'<code>-&gt;</code> on <b>pointers</b> — class instances you hold the address of: <code>AActor*</code>, <code>UWorld*</code>, <code>AGameMode*</code>.']},
+{t:'code',x:`// class instance via pointer
+AMyCar* MyCar = SpawnActor<AMyCar>(...);
+MyCar->StartEngine();
+float Torque = MyCar->EngineTorque;
+
+// struct held by value
+FHitResult HitResult;
+FVector HitLocation = HitResult.ImpactLocation;`},
+{t:'aside',lab:'Why it works this way',x:'It is not really "structs vs classes" at the language level — it is <i>value vs address</i>. You can have a pointer to an <code>FVector</code> and you would use <code>-&gt;</code> on it. Unreal gameplay code just happens to pass structs by value or reference and classes by pointer almost universally, which makes the shorthand reliable. Visual Studio and Rider will auto-correct <code>.</code> to <code>-&gt;</code> when you type it on a pointer, which quietly trains the habit.'},
+{t:'chk',q:'You have <code>FTransform SpawnTM;</code> and want its location. Dot or arrow?',a:'<b>Dot.</b> <code>SpawnTM.GetLocation()</code> — <code>FTransform</code> is a struct held by value. The <code>F</code> prefix is your tell (Module 8).'},
+
+{t:'h',x:':: — scope resolution'},
+{t:'p',x:'The double colon reaches into a <b>type</b> rather than an instance. Two everyday uses.'},
+{t:'p',x:'<b>1. Calling static functions.</b> A static function belongs to the class itself, not to any instance, so you cannot call it through an object:'},
+{t:'code',x:`UGameplayStatics::PlaySoundAtLocation(this, SoundOnStagger, GetActorLocation());`},
+{t:'p',x:'<code>UGameplayStatics</code> is nothing but static functions — spawn a sound, spawn an emitter, get the player pawn. It is one of the most-used classes in the engine.'},
+{t:'p',x:'<b>2. Defining a function body</b> in the .cpp, static or not:'},
+{t:'code',x:`void ARogueAICharacter::Stagger(UAnimMontage* AnimMontage, FName SectionName)
+{
+  // implementation lives here
+}`},
+
+{t:'h',x:'The WorldContextObject parameter'},
+{t:'p',x:'Because a static function belongs to no instance, it has no idea which <code>UWorld</code> it is operating in — and Unreal has more worlds than you think (PIE, the static mesh editor preview, each client in a listen-server). So static gameplay functions take a context object as their first parameter:'},
+{t:'code',x:`static void PlaySoundAtLocation(const UObject* WorldContextObject,
+                                USoundBase* Sound, FVector Location, ...);`},
+{t:'p',x:'Almost always you pass <code>this</code> — the calling actor lives in the relevant world, so the engine can ask it which world that is. The <code>const</code> means the function will not modify your object.'},
+{t:'chk',q:'Why do so many static engine functions demand a WorldContextObject as their first argument?',a:'Because <b>static functions have no instance and therefore no world</b>. Unreal can host several <code>UWorld</code>s at once — the PIE session, editor preview viewports, and so on — so the function needs an object that already belongs to a world in order to find the right one. Passing <code>this</code> from an actor supplies it.'}
+],
+quiz:[
+{q:'<code>FHitResult Hit; ... Hit.ImpactPoint</code> — why a dot?',
+ opts:['Because FHitResult is a struct held by value, not a pointer','Because FHitResult is const','Because ImpactPoint is a static member','Because it is inside a function body'],
+ c:0,why:'The F prefix marks a struct, and here it is held by value. Arrow is for pointers.'},
+{q:'Can you call <code>PlaySoundAtLocation</code> on an instance, like <code>MyStatics->PlaySoundAtLocation(...)</code>?',
+ opts:['Yes, that is the preferred form','Only if the class is BlueprintType','Yes, but only in the constructor','No — static functions are called on the type with ::'],
+ c:3,why:'Static functions belong to the class, not to instances. <code>UGameplayStatics</code> is never instantiated at all.'},
+{q:'What does the double colon mean in <code>void ARogueAICharacter::Stagger(...)</code>?',
+ opts:['The function is static','The function is being defined as a member of ARogueAICharacter','The function is virtual','The function is exposed to Blueprint'],
+ c:1,why:'Here <code>::</code> is scope resolution for a definition — it says "this body belongs to that class". Nothing to do with static.'},
+{q:'What is the safest thing to pass as WorldContextObject from inside an actor method?',
+ opts:['nullptr','GEngine','this','GetClass()'],
+ c:2,why:'<code>this</code> is an object that already lives in the correct world, which is precisely what the parameter is for.'}
+]
+},
+
+/* ---------------------------------------------------------- 3 */
+{
+grp:"Part I — Syntax & Symbols",
+title:"The Ampersand: references and addresses",
+lede:"One symbol, two jobs. Pass-by-reference avoids copies and lets a function mutate the caller's variable. The address operator lets you hand a function itself to another function.",
+blocks:[
+{t:'h',x:'Pass by reference'},
+{t:'p',x:'Pass a value type into a function without <code>&amp;</code> and you pass a <b>copy</b>. Two consequences: for a large struct or a <code>TArray</code> of thousands of elements the copy is expensive, and any change you make inside the function is thrown away with the copy.'},
+{t:'code',x:`void ChangeTime(float TimeToUpdate)
+{
+    TimeToUpdate += 1.0f;   // modifies the COPY
+}
+
+float TimeVar = 0.0f;
+ChangeTime(TimeVar);
+print(TimeVar);   // 0.0f  -- the original never changed`},
+{t:'p',x:'Add the ampersand and the parameter <i>is</i> the caller\'s variable:'},
+{t:'code',x:`void ChangeTime(float& TimeToUpdate)
+{
+    TimeToUpdate += 1.0f;   // modifies the ORIGINAL
+}
+
+float TimeVar = 0.0f;
+ChangeTime(TimeVar);
+print(TimeVar);   // 1.0f`},
+{t:'aside',lab:'Why it works this way — and the idiom you will see everywhere',x:'<p>The two motivations are separable, and Unreal code separates them with <code>const</code>:</p><p><code>void Foo(const TArray&lt;AActor*&gt;&amp; Actors)</code> — "do not copy this ten-thousand-element array, but I promise not to modify it." That is the most common signature in the engine. It gives you the performance half of references while ruling out the mutation half.</p><p>A plain <code>TArray&lt;AActor*&gt;&amp;</code> without <code>const</code> is a signal to the reader: this function is going to change your array. Read parameter constness as documentation.</p>'},
+{t:'chk',q:'A function takes <code>const FVector& Location</code>. Why not just <code>FVector Location</code>?',a:'To avoid copying the struct, while the <code>const</code> guarantees the function will not modify the caller\'s vector. For something as small as an <code>FVector</code> the saving is marginal — but it is a house convention that scales correctly to <code>FTransform</code>, <code>FHitResult</code> and large containers, so the engine applies it uniformly.'},
+{t:'chk',q:'This is specific to value types. Why do you rarely see & used on Actor parameters?',a:'Because actors are already passed as <b>pointers</b> (<code>AActor* Actor</code>). Copying a pointer is copying eight bytes, and the function can already reach through it to mutate the actor. References solve a problem that pointers have already solved for class instances.'},
+
+{t:'h',x:'The address operator: passing functions around'},
+{t:'p',x:'The other job of <code>&amp;</code> is to take the address of a function so you can hand it to something that will call it later. You need this constantly — input binding, timers, delegates.'},
+{t:'code',x:`void ARogueCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+  Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+  PlayerInputComponent->BindAxis("MoveForward", this, &ARogueCharacter::MoveForward);
+  PlayerInputComponent->BindAxis("MoveRight",   this, &ARogueCharacter::MoveRight);
+}`},
+{t:'code',x:`// Explode this bomb after MaxFuzeTime seconds
+GetWorldTimerManager().SetTimer(FuzeTimerHandle, this,
+    &ARogueBombActor::Explode, MaxFuzeTime, false);`},
+{t:'p',x:'Read the pattern: <b>who to call it on</b> (<code>this</code>), then <b>which function</b> (<code>&amp;Class::Function</code>). You will see the identical shape again in Module 7 when binding delegates.'},
+{t:'chk',q:'Why <code>&ARogueBombActor::Explode</code> rather than <code>Explode()</code>?',a:'You are not calling it — you are naming it. <code>Explode()</code> with parentheses would execute the function immediately and pass its return value. <code>&amp;Class::Explode</code> passes the function\'s address so the timer manager can call it later, when the fuze runs out.'}
+],
+quiz:[
+{q:'<code>void Add(float V) { V += 1; }</code> called with a variable holding 5.0f. What does the caller\'s variable hold afterwards?',
+ opts:['6.0f','5.0f','0.0f','Undefined'],
+ c:1,why:'Without &, V is a copy. The increment is discarded when the function returns.'},
+{q:'What does <code>const TArray&lt;AActor*&gt;& Actors</code> communicate?',
+ opts:['The array will be copied for safety','The array elements are const','The array is empty','No copy is made, and the function will not modify the array'],
+ c:3,why:'The reference avoids the copy; the const promises no mutation. It is the standard read-only-large-thing signature.'},
+{q:'Which is the correct way to hand a function to a timer?',
+ opts:['SetTimer(H, this, &ARogueBombActor::Explode, T, false)','SetTimer(H, this, ARogueBombActor::Explode(), T, false)','SetTimer(H, this, "Explode", T, false)','SetTimer(H, &this, Explode, T, false)'],
+ c:0,why:'Address of the member function, no parentheses — parentheses would call it right now instead of scheduling it.'},
+{q:'Why is pass-by-reference less relevant for Actors than for structs?',
+ opts:['Actors cannot be referenced','References are illegal on UObject types','Actors are already passed by pointer, which avoids copying and allows mutation','Actors are always const'],
+ c:2,why:'A pointer already gives you both benefits, so gameplay code passes actors as pointers and reserves & for value types.'}
+]
+},
+
+/* ---------------------------------------------------------- 4 */
+{
+grp:"Part II — Structure & Dependencies",
+title:"Access Specifiers & Forward Declaration",
+lede:"Two ways of limiting exposure: who may touch your data, and what your headers are allowed to know about.",
+blocks:[
+{t:'h',x:'public / protected / private'},
+{t:'table',head:['Specifier','Reachable from'],rows:[
+['<code>private:</code>','Only this class. Not even derived classes.'],
+['<code>protected:</code>','This class and its derived classes. Not outsiders.'],
+['<code>public:</code>','Anyone.']]},
+{t:'p',x:'Default to the most restrictive that works. The practical Unreal reason: a public variable can be changed by anyone at any time <b>without your class ever finding out</b>. If changing a value should trigger something — recompute a stat, broadcast a delegate, replicate — then the variable must not be public.'},
+{t:'code',x:`private:
+  int32 MyInt;
+
+public:
+  void SetMyInt(int32 NewInt);   // can validate, clamp, and broadcast`},
+{t:'aside',lab:'Why it works this way',x:'This is exactly how attribute components are built. <code>Health</code> is protected; <code>ApplyHealthChange()</code> is public. That funnel is what makes it possible to fire <code>OnHealthChanged.Broadcast(...)</code> reliably (Module 7) — if any class could write <code>Health = 0</code> directly, half your UI updates and death handling would silently never run. Encapsulation here is not academic tidiness; it is the precondition for event-driven code.'},
+{t:'chk',q:'Your character\'s Health should update the HUD whenever it changes. Public float, or protected float with a setter?',a:'<b>Protected with a public setter.</b> The setter is where you clamp to a valid range, apply immunity rules, and broadcast the change event. A public float has no hook — anything writing to it bypasses your entire pipeline.'},
+
+{t:'h',x:'Two meanings of the word <i>public</i>'},
+{t:'p',x:'The same keyword appears in two unrelated positions. Conflating them is one of the most common misreads of an Unreal class declaration.'},
+{t:'code',x:`class URogueGameplayInterface : public UInterface   // inheritance specifier
+{
+public:                                            // member access label
+  void Foo();
+};`},
+{t:'p',x:'The <code>:</code> means <b>"inherits from"</b>. Everything after it is a list of base classes, and each base gets its own specifier. That first <code>public</code> is <b>not</b> saying the class is public — C++ has no such concept in that position. It controls what access level the <i>inherited</i> members keep:'},
+{t:'table',head:['Written','Base\'s public members become','Base\'s protected become'],rows:[
+['<code>public</code>','public','protected'],
+['<code>protected</code>','protected','protected'],
+['<code>private</code>','private','private']]},
+{t:'p',x:'Inheritance happens either way — the specifier is a filter on visibility, not a gate on whether you inherit at all.'},
+{t:'aside',lab:'What public inheritance actually buys you',x:'Beyond member access, it makes the <b>is-a relationship visible from outside</b>. With <code>public</code>, any code anywhere may treat a <code>URogueGameplayInterface*</code> as a <code>UInterface*</code>. Under private inheritance the relationship still exists internally, but outside code cannot make that conversion — so the engine could no longer treat your class as the thing it derives from. Module 5 picks this up directly.'},
+{t:'warn',lab:'Why the word is always written out',x:'<p>Omit the specifier and <code>class</code> defaults to <b>private</b> inheritance:</p><p><code>class URogueGameplayInterface : UInterface</code> &nbsp;&larr; private, silently broken<br><code>class URogueGameplayInterface : public UInterface</code> &nbsp;&larr; what you want</p><p><code>struct</code> defaults to public — that is the only real difference between the two keywords in C++. Drop that one word in an Unreal class and you get errors from generated code you never wrote.</p>'},
+{t:'chk',q:'Does <code>public</code> in <code>class A : public B</code> mean that A is public?',a:'<b>No.</b> There is no such thing as a "public class" in that position. It means A publicly inherits from B: B\'s public members stay public in A, and the outside world may treat an A as a B. The <i>is-a</i> part comes from <code>: B</code>; the <code>public</code> only decides who is allowed to know about it.'},
+{t:'chk',q:'<code>class ARogueItemChest : public AActor, public IRogueGameplayInterface</code> — why does the word appear twice?',a:'Two base classes, each needing its own specifier. It is a comma-separated list. This is multiple inheritance, and it is legal here precisely because the I-half of an interface has no base class of its own — which is the whole reason Unreal splits interfaces in two (Module 6).'},
+
+{t:'h',x:'Forward declaration'},
+{t:'p',x:'To use a class in a header, you have two options: <code>#include</code> its full header, or simply declare that the name is a class.'},
+{t:'code',x:`#include "CoreMinimal.h"
+//#include "NiagaraSystem.h"   // << we do NOT need the whole file
+
+class UNiagaraSystem;          // << forward declaration
+
+UCLASS()
+class ACTIONROGUELIKE_API ARogueCharacter : public ACharacter
+{
+  GENERATED_BODY()
+
+  TObjectPtr<UNiagaraSystem> CastingEffect;
+};`},
+{t:'p',x:'Epic\'s coding standard states it plainly: <i>"If you can use forward declarations instead of including a header, do so."</i>'},
+{t:'aside',lab:'Why it works this way',x:'<p>A pointer is the same size no matter what it points at. So to declare a <i>pointer member</i>, the compiler needs only to know that <code>UNiagaraSystem</code> is a type — not its size, members, or layout. The forward declaration supplies exactly that minimum.</p><p>The cost you avoid is transitive. <code>#include "NiagaraSystem.h"</code> in your header means every file that includes <i>your</i> header also parses Niagara\'s header, and everything Niagara\'s header includes. Touch one line in any of those and the whole dependent chain rebuilds. Multiply across a project and this is the difference between a 20-second iteration loop and a 6-minute one.</p><p>The catch: in the <code>.cpp</code> where you actually <i>dereference</i> the pointer — call a function on it, read a member — you do need the real include. Forward declare in the header, include in the source.</p>'},
+{t:'chk',q:'Does forward declaring classes help the game run faster, or help it compile faster?',a:'<b>Compile faster.</b> It is purely a build-time and dependency-management tool. The generated machine code is identical — at runtime a pointer is a pointer either way. Anyone who tells you forward declaration is a performance optimisation is confusing build time with frame time.'},
+{t:'chk',q:'You forward declared <code>class UNiagaraSystem;</code> in your header. In the .cpp you call <code>CastingEffect->GetFName()</code>. Will it compile?',a:'<b>No</b> — not until you <code>#include "NiagaraSystem.h"</code> in the .cpp. Declaring a pointer needs only the name; <i>using</i> the object needs the full definition. This is the normal, correct pattern: forward declare in the header, include in the source file.'}
+],
+quiz:[
+{q:'Forward declaring a class instead of including its header primarily improves:',
+ opts:['Runtime frame rate','Blueprint loading speed','Memory usage at runtime','Compile times and dependency coupling'],
+ c:3,why:'Build-time only. The emitted code is identical — this is about how much the compiler has to re-parse and re-build when something changes.'},
+{q:'Why is a forward declaration sufficient for a pointer member?',
+ opts:['The compiler only needs to know the name is a type; pointer size does not depend on the pointee','Pointers are always 4 bytes so no type info is needed','Unreal resolves all types at runtime','GENERATED_BODY fills in the rest'],
+ c:0,why:'Pointer size is fixed regardless of what it points to, so the declaration only has to establish that the identifier names a class.'},
+{q:'Where do you still need the real #include?',
+ opts:['Nowhere, forward declaration replaces it entirely','In the .build.cs file','In the .cpp file where you actually dereference the pointer','In the .uproject'],
+ c:2,why:'Calling members requires the complete definition. Header: forward declare. Source: include.'},
+{q:'A variable that must trigger an event when it changes should be:',
+ opts:['public, so listeners can watch it','private or protected, with a public setter that broadcasts','public but marked const','a static member'],
+ c:1,why:'Only a setter gives you a place to hang the event. A public variable can be written from anywhere with no notification.'},
+{q:'protected members are accessible from:',
+ opts:['Any class in the module','This class only','This class and derived classes','This class and any class in the same file'],
+ c:2,why:'That is the whole distinction from private, which excludes derived classes too.'},
+{q:'In <code>class A : public B</code>, what does <code>public</code> control?',
+ opts:['What access level B\'s inherited members keep in A, and whether outsiders may treat an A as a B','That A itself is publicly visible','Whether A can be instantiated','Whether A is exposed to Blueprint'],
+ c:0,why:'It is an inheritance specifier, not a label on the class. The is-a relationship comes from the colon; public decides who may rely on it.'},
+{q:'You write <code>class AMyActor : AActor</code>, omitting the specifier. What happens?',
+ opts:['Identical to writing public — it is the default','You get private inheritance, and generated code breaks','It fails to compile immediately with a clear message','Unreal inserts public automatically'],
+ c:1,why:'<code>class</code> defaults to private inheritance (<code>struct</code> defaults to public). The failure surfaces as errors in code you never wrote.'}
+]
+},
+
+/* ---------------------------------------------------------- 5 */
+{
+grp:"Part II — Structure & Dependencies",
+title:"Casting",
+lede:"Cast<T> is safe and you will use it constantly. What it costs, however, is different in C++ than in Blueprint — and the Blueprint cost is severe enough to sink a project's memory budget.",
+blocks:[
+{t:'h',x:'Which direction actually needs a cast'},
+{t:'p',x:'Half the confusion around casting dissolves once you notice that only one of the two directions requires any syntax at all.'},
+{t:'code',x:`ARogueItemChest* Chest = GetChest();
+
+// UP the hierarchy (derived -> base): implicit. No Cast, ever.
+AActor* AsActor = Chest;
+SomeFunctionTakingAnActor(Chest);
+
+// DOWN the hierarchy (base -> derived): needs Cast, and can fail.
+AActor* SomeActor = GetSomeActor();
+ARogueItemChest* MaybeChest = Cast<ARogueItemChest>(SomeActor);`},
+{t:'p',x:'The compiler can always prove a chest <i>is</i> an actor — that is exactly what the inheritance declared (Module 4). It cannot prove an arbitrary actor <i>is</i> a chest, because most actors are not. So the downcast is the one needing a runtime check, and the one that can hand you <code>nullptr</code>.'},
+{t:'aside',lab:'You use upcasting constantly without noticing',x:'Every time you pass your character to a function taking <code>AActor*</code>, or store a component in a <code>UActorComponent*</code>, you are upcasting implicitly. It works because of the <code>public</code> in the inheritance list — under private inheritance, none of those lines would compile. That is the concrete payoff of the specifier from the previous module.'},
+{t:'chk',q:'Do you need <code>Cast&lt;AActor&gt;(MyCharacter)</code> to pass a character to a function taking <code>AActor*</code>?',a:'<b>No.</b> That is an upcast — implicit, always safe, no syntax required. Just pass the character. Writing the cast is harmless but noise, and it signals to a reader that you were unsure which direction you were going.'},
+
+{t:'h',x:'Cast&lt;T&gt; never crashes'},
+{t:'p',x:'Unreal\'s <code>Cast&lt;T&gt;</code> differs from raw C++ casting: if the object is not actually of that type, you get <code>nullptr</code> back rather than undefined behaviour. So the pattern is cast, then check.'},
+{t:'code',x:`APawn* MyPawn = GetPawn();
+ARogueCharacter* MyCharacter = Cast<ARogueCharacter>(MyPawn);
+if (MyCharacter)   // verify before use
+{
+  // Respawn() is declared in ARogueCharacter, not in APawn,
+  // so we had to cast to reach it.
+  MyCharacter->Respawn();
+}`},
+{t:'p',x:'The <i>reason</i> to cast is always the same: the function or variable you want is declared on a more specific class than the pointer you are holding.'},
+
+{t:'h',x:'The Blueprint cost — this one matters'},
+{t:'warn',lab:'Hard reference cascade',x:'<p>A Cast node on a Blueprint EventGraph creates a <b>hard reference</b> to the target class. That class is loaded into memory <b>as soon as the Blueprint containing the node is loaded</b> — not when execution reaches the node.</p><p>BlueprintA has a cast to BlueprintB. Load BlueprintA and BlueprintB comes with it, along with every mesh, texture, sound and particle BlueprintB references. Even if no instance of BlueprintB exists anywhere in the level.</p><p>This is why "put all the code in the Character Blueprint" ends in a project that takes ninety seconds to load a level. Every cast on that graph drags its entire asset subtree into memory at once.</p>'},
+{t:'chk',q:'A Blueprint has a Cast node that never executes because the branch is never taken. Is the target class loaded?',a:'<b>Yes.</b> Loading is triggered by the Blueprint being loaded, not by execution reaching the node. Dead code still costs you the full memory of the referenced class and its assets. This is the single most common cause of runaway memory in Blueprint-heavy projects.'},
+
+{t:'h',x:'The C++ cost — different, and smaller'},
+{t:'p',x:'In C++ the memory argument evaporates: <b>all your C++ classes are loaded at startup regardless</b>. There is nothing to cascade. What remains is a compile-time dependency argument — casting to a class means including its header, which pulls that class into your rebuild graph.'},
+{t:'p',x:'Hence the rule: <b>cast to the least specific class that declares what you need.</b> If the function you want is on <code>APawn</code>, cast to <code>APawn</code>. Only reach for <code>ARogueCharacter</code> if the thing you want was first declared there.'},
+{t:'chk',q:'Same cast in C++ and in Blueprint — is the concern the same?',a:'<b>No.</b> In Blueprint the concern is <b>memory</b>: the cast is a hard reference that loads the target class and all its assets. In C++ the concern is <b>compile-time coupling</b>: all classes are loaded at startup anyway, so what you are paying is rebuild cascades, not RAM.'},
+{t:'p',x:'And when you find yourself casting to five different specific classes just to call the same conceptually-identical function on each — that is the signal for the next module.'}
+],
+quiz:[
+{q:'<code>Cast&lt;ARogueCharacter&gt;(SomePawn)</code> where the pawn is a different class entirely. Result?',
+ opts:['Returns nullptr','Undefined behaviour','Crash','Returns the pawn unchanged'],
+ c:0,why:'Unreal casts are checked. Failure yields nullptr — which is why the if-check after a cast is idiomatic rather than paranoid.'},
+{q:'When does a Blueprint Cast node load its target class into memory?',
+ opts:['When execution reaches the node','When the owning Blueprint is loaded','Only if the cast succeeds','On the first frame of gameplay'],
+ c:1,why:'It is a load-time hard reference. Execution is irrelevant — this is what makes unused cast nodes so expensive.'},
+{q:'Why is the memory argument against casting weaker in C++?',
+ opts:['C++ casts are lazy','C++ casts are compiled out in shipping','All C++ classes are loaded at startup anyway','Cast&lt;T&gt; uses weak pointers'],
+ c:2,why:'There is no cascade to trigger — the classes are already resident. The remaining cost is compile-time dependency.'},
+{q:'You need a function declared on APawn, and you hold an AActor*. Best cast target?',
+ opts:['ARogueCharacter, to be safe','UObject','AActor, no cast needed','APawn — the least specific class that declares what you need'],
+ c:3,why:'Casting further down the hierarchy than necessary adds dependencies you do not need and narrows what the code accepts for no benefit.'},
+{q:'Which direction requires <code>Cast&lt;T&gt;</code>?',
+ opts:['Base to derived (downcast)','Derived to base (upcast)','Neither — Cast is only for interfaces','Both directions equally'],
+ c:0,why:'Upcasting is implicit and always provable. Downcasting is the one that needs a runtime check and can return nullptr.'}
+]
+},
+
+/* ---------------------------------------------------------- 6 */
+{
+grp:"Part III — Communication Patterns",
+title:"Interfaces",
+lede:"How to call the same function on wildly different actors without a shared base class — and why Unreal's version needs two classes and a strange calling syntax.",
+blocks:[
+{t:'h',x:'The problem'},
+{t:'p',x:'Your player can interact with a lever, a door, a chest, a key, an NPC. Each reacts completely differently. You do not want your interaction code to know about any of those classes.'},
+{t:'p',x:'Option A is a shared base class with a virtual <code>Interact()</code>. Perfectly valid — but it forces every interactable into one inheritance chain, which is often impossible. A door might need to be an <code>AActor</code>, an NPC an <code>ACharacter</code>. They cannot share a base without contortions.'},
+{t:'p',x:'Option B is an interface: a contract that any class can adopt, regardless of where it sits in the hierarchy.'},
+
+{t:'h',x:'The two-class shape'},
+{t:'p',x:'Unreal interfaces are declared as a <b>pair</b>. This is the part that reads as bizarre until you know which one does what.'},
+{t:'code',x:`// This class does not need to be modified.
+UINTERFACE(MinimalAPI)
+class URogueGameplayInterface : public UInterface
+{
+  GENERATED_BODY()
+};
+
+class ACTIONROGUELIKE_API IRogueGameplayInterface
+{
+  GENERATED_BODY()
+
+public:
+  UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+  void Interact(APawn* InstigatorPawn);
+};`},
+
+{t:'h',x:'Reading the declaration token by token'},
+{t:'p',x:'Several things on those lines are not what they look like. Take the U-half first.'},
+{t:'list',x:[
+'<b><code>UINTERFACE(MinimalAPI)</code></b> — declares to the engine that this is an interface. <code>MinimalAPI</code> means: export only this class\'s <i>type information</i> to other modules, not its function bodies. Other modules can cast to the type but cannot call into it. For an empty stub that is precisely what you want, and it keeps compile times down.',
+'<b><code>: public UInterface</code></b> — you never name your own interface here. Every U-half derives from the engine\'s <code>UInterface</code>, always. The <code>public</code> is the inheritance specifier from Module 4, not a label on the class.',
+'<b><code>GENERATED_BODY()</code></b> — a <b>macro, not a function</b>. The parentheses fool everyone. Unreal Header Tool replaces it with generated code before compilation. Note there is no semicolon after it and no body; neither is true of a function declaration.']},
+{t:'p',x:'Now the I-half, which is where the real trap sits:'},
+{t:'code',x:`class ACTIONROGUELIKE_API IRogueGameplayInterface
+      ^^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^^^
+      export macro        the class name`},
+{t:'warn',lab:'ACTIONROGUELIKE_API is not a class',x:'<p>There is only <b>one</b> class on that line, and it is <code>IRogueGameplayInterface</code>. <code>ACTIONROGUELIKE_API</code> is a macro Unreal Build Tool generates for every module, named <code>YOURMODULE_API</code> — in a project called Hasard it would be <code>HASARD_API</code>. It expands to a linker directive meaning "export this symbol so other modules can link against it".</p><p>Strip the macro away and the line reads <code>class IRogueGameplayInterface</code>, with <b>no base class at all</b>. That is the entire point: the I-half inherits from nothing, so a class anywhere in your hierarchy can adopt it.</p>'},
+{t:'aside',lab:'Why the two halves are exported differently',x:'The U-half gets cheap <code>MinimalAPI</code> treatment because it is an empty stub nobody calls into. The I-half gets the full <code>ACTIONROGUELIKE_API</code> export because it is the half whose functions other modules genuinely need to invoke. The asymmetry between those two lines <i>is</i> the division of labour between them.'},
+{t:'p',x:'Finally, the body declares <b>one</b> function, not two:'},
+{t:'code',x:`public:
+  UFUNCTION(BlueprintCallable, BlueprintNativeEvent)   // markup describing the line below
+  void Interact(APawn* InstigatorPawn);                // the one and only function`},
+{t:'p',x:'<code>UFUNCTION(...)</code> decorates the declaration underneath it — the same relationship <code>UPROPERTY()</code> has with a variable (Module 10). The two items inside its parentheses are not functions either; they are <b>specifiers</b>: <code>BlueprintCallable</code> (Blueprint may call it) and <code>BlueprintNativeEvent</code> (C++ supplies a default, Blueprint may override it).'},
+{t:'warn',lab:'The halves are paired by name',x:'Unreal Header Tool matches the two classes by <b>identical spelling</b>, differing only in the U/I prefix. Rename one without the other and the pairing silently breaks.'},
+{t:'chk',q:'In <code>class HASARD_API IHasardInteractable</code>, how many classes are declared, and what is it called?',a:'<b>One</b>, called <code>IHasardInteractable</code>. <code>HASARD_API</code> is your project\'s export macro, generated by Unreal Build Tool from the module name. It is neither a type nor a base class.'},
+
+{t:'table',head:['Prefix','Purpose','You use it for'],rows:[
+['<code>U…</code>','The reflection stub the engine registers','<code>Implements&lt;URogueGameplayInterface&gt;()</code>'],
+['<code>I…</code>','The real interface your classes inherit','Inheriting, and <code>IRogue…::Execute_Interact(...)</code>']]},
+{t:'aside',lab:'Why there are two',x:'Unreal\'s reflection system only tracks <code>UObject</code>-derived types. But an interface must be inheritable by classes that already have a <code>UObject</code> base, and C++ multiple-inheritance of <code>UObject</code> would be a disaster. So Epic splits it: the <code>U</code> class exists purely so the reflection system has something to register and query, and the <code>I</code> class is a plain C++ class your types actually inherit. The macro machinery keeps them paired.'},
+
+{t:'h',x:'Implementing it'},
+{t:'code',x:`UCLASS()
+class ACTIONROGUELIKE_API ARogueItemChest : public AActor, public IRogueGameplayInterface
+{
+  GENERATED_BODY()
+
+  // _Implementation suffix because the interface function is BlueprintNativeEvent
+  void Interact_Implementation(APawn* InstigatorPawn);
+};`},
+{t:'p',x:'<code>BlueprintNativeEvent</code> means: C++ may provide a base implementation, and a Blueprint subclass may override or extend it. Unreal generates the dispatch, and your C++ body takes the <code>_Implementation</code> suffix.'},
+{t:'warn',lab:'Unlike classical interfaces',x:'In most languages, adopting an interface <i>obligates</i> you to implement every member. In Unreal, <b>implementation is optional</b>. A class can declare the interface and implement nothing. Which means checking is on you.'},
+
+{t:'h',x:'Checking and calling'},
+{t:'code',x:`// Check — uses the U-prefixed class
+if (MyActor->Implements<URogueGameplayInterface>())
+{
+}
+
+// Call — uses the I-prefixed class, Execute_ prefix, target as first arg
+IRogueGameplayInterface::Execute_Interact(MyActor, MyParam1);`},
+{t:'warn',lab:'Implements does not cast anything',x:'<code>Implements&lt;T&gt;()</code> returns a <b>bool</b>. It is a question — "does this actor implement this interface, yes or no?" Nothing is converted, no pointer comes back, and <code>MyActor</code> is unchanged. The angle brackets mislead, because <code>Cast&lt;T&gt;</code> uses the same shape.'},
+{t:'table',head:['','<code>Cast&lt;T&gt;</code>','<code>Implements&lt;T&gt;</code>'],rows:[
+['Shape','free function; the actor is an <b>argument</b>','member function; the actor is the <b>receiver</b> via <code>-&gt;</code>'],
+['Parentheses','<code>(MyActor)</code>','<code>()</code> — empty'],
+['Returns','a pointer you can use, or <code>nullptr</code>','<code>true</code> or <code>false</code>']]},
+{t:'p',x:'The parentheses on <code>Implements</code> are empty precisely <i>because</i> the actor is already on the left of the arrow. There is nothing left to pass.'},
+{t:'p',x:'In real code the two lines belong together — ask first, then act:'},
+{t:'code',x:`if (MyActor->Implements<URogueGameplayInterface>())
+{
+    IRogueGameplayInterface::Execute_Interact(MyActor, MyParam1);
+}`},
+{t:'aside',lab:'Why MyActor changes position on the third line',x:'<code>Execute_Interact</code> is a <b>static</b> function — that is what the <code>::</code> is telling you, straight out of Module 2. Static functions have no receiver, so there is nothing to put on the left of an arrow and the target must be handed in as an ordinary argument instead. Same actor, two call shapes, for a reason you already know. (That static function appears nowhere in your source: <code>GENERATED_BODY()</code> in the I-class generates it.)'},
+{t:'chk',q:'Both of these compile and both work in an <code>if</code>. What does the first give you that the second does not?<br><code>if (Cast&lt;ARogueItemChest&gt;(MyActor)) { }</code><br><code>if (MyActor-&gt;Implements&lt;URogueGameplayInterface&gt;()) { }</code>',a:'The first produces a usable <code>ARogueItemChest*</code> — which that line then throws away untested. Capture it if you want it: <code>if (ARogueItemChest* Chest = Cast&lt;ARogueItemChest&gt;(MyActor))</code>. The second can only ever say yes or no; there is nothing to capture, which is why it is paired with <code>Execute_</code>.'},
+{t:'warn',lab:'Do not cast to the interface',x:'You <i>can</i> <code>Cast&lt;IRogueGameplayInterface&gt;(Actor)</code> and call the function directly, and it will appear to work. It <b>fails completely when the interface was added to a class in Blueprint rather than in C++</b> — the C++ side has no I-class to cast to. Since a designer adding the interface in Blueprint is exactly the flexibility you built the interface for, always use <code>Execute_</code>. Avoid the cast form altogether.'},
+{t:'chk',q:'Implements&lt;T&gt; and Execute_Foo — which takes the U class and which takes the I class?',a:'<code>Implements&lt;<b>U</b>MyInterface&gt;()</code> — checking is a reflection query, so it needs the reflection-registered U class.<br><code><b>I</b>MyInterface::Execute_Foo(Target, Args)</code> — calling goes through the real interface class. Mnemonic: <b>U for "does it?"</b>, <b>I for "do it"</b>.'},
+{t:'chk',q:'A designer adds your interface to a Blueprint actor in the editor. Your code uses Cast&lt;IMyInterface&gt;. What happens?',a:'The cast returns <b>null</b> and the interaction silently does nothing. Blueprint-added interfaces exist in the reflection system, not as C++ inheritance, so there is no I-class to cast to. <code>Execute_</code> routes through reflection and handles both cases — which is why it is the only form you should use.'},
+{t:'p',x:'One more alternative worth knowing: if you want shared <i>behaviour</i> rather than a shared contract, an <b>ActorComponent</b> is often the better answer. Interfaces say "you can be asked to do this"; components say "you have this capability, and here is how it works".'}
+],
+quiz:[
+{q:'Why does an Unreal interface require two classes?',
+ opts:['The U class registers with the reflection system; the I class is what your classes actually inherit','One is for C++ and one is for Blueprint only','Backwards compatibility with UE3','One is the declaration and one is the definition'],
+ c:0,why:'Reflection only tracks UObject types, but the interface itself must be multiply-inheritable by existing UObject classes. The split resolves that.'},
+{q:'Which prefix goes with <code>Implements&lt;T&gt;()</code>?',
+ opts:['I — IMyInterface','Either works','F — FMyInterface','U — UMyInterface'],
+ c:3,why:'It is a reflection query, so it needs the reflection-registered U class.'},
+{q:'Correct way to call an interface function?',
+ opts:['MyActor-&gt;Interact(Pawn)','IMyInterface::Execute_Interact(MyActor, Pawn)','Cast&lt;IMyInterface&gt;(MyActor)-&gt;Interact(Pawn)','UMyInterface::Interact(MyActor, Pawn)'],
+ c:1,why:'Execute_ is the only form that works for interfaces added in Blueprint as well as in C++.'},
+{q:'How does Unreal differ from classical interfaces regarding implementation?',
+ opts:['Every function must be implemented or it will not compile','Only one function per interface is allowed','Implementing the functions is optional','Functions cannot have parameters'],
+ c:2,why:'Unreal permits a class to declare the interface without implementing anything — so defensive checking is your responsibility.'},
+{q:'<code>BlueprintNativeEvent</code> on an interface function means:',
+ opts:['C++ provides a base implementation (with _Implementation suffix) that Blueprint may override or extend','It can only be called from Blueprint','It runs natively on a background thread','It cannot be overridden'],
+ c:0,why:'It is the hybrid specifier: native default behaviour, Blueprint-overridable.'},
+{q:'In <code>class ACTIONROGUELIKE_API IRogueGameplayInterface</code>, what is ACTIONROGUELIKE_API?',
+ opts:['A base class the interface inherits from','A module export macro generated by Unreal Build Tool','A second class being declared','A reflection specifier like MinimalAPI'],
+ c:1,why:'One class is declared here, named IRogueGameplayInterface. The macro is YOURMODULE_API and expands to a linker export directive. Strip it and the line has no base class at all.'},
+{q:'What does <code>MyActor->Implements&lt;URogueGameplayInterface&gt;()</code> return?',
+ opts:['An IRogueGameplayInterface pointer','nullptr on failure','The actor, cast to the interface','A bool'],
+ c:3,why:'It is a question, not a conversion. Nothing is cast and no pointer comes back — which is why it is paired with Execute_ rather than dereferenced.'},
+{q:'Why is the target passed as the first argument to <code>Execute_Interact</code> rather than used with <code>-&gt;</code>?',
+ opts:['Because interfaces cannot use the arrow operator','Because MyActor might be null','Because Execute_ is a static function, and static functions have no receiver','Because it is a template'],
+ c:2,why:'The :: is the giveaway (Module 2). No instance means no left-hand side, so the target becomes an ordinary parameter.'},
+{q:'<code>GENERATED_BODY()</code> inside an interface class is:',
+ opts:['A macro replaced by Unreal Header Tool with generated code','A function that must be implemented in the .cpp','The class constructor','A Blueprint event'],
+ c:0,why:'A macro, despite the parentheses. Among other things it generates the Execute_ static helpers that appear nowhere in your source.'}
+]
+},
+
+/* ---------------------------------------------------------- 7 */
+{
+grp:"Part III — Communication Patterns",
+title:"Delegates",
+lede:"Events. Instead of asking every frame whether something changed, you ask to be told. This is the single biggest structural upgrade over Tick-based thinking.",
+blocks:[
+{t:'h',x:'The idea'},
+{t:'p',x:'A delegate holds a list of bound functions and calls them when triggered. Also called events, or callbacks. In Blueprint, dynamic multicast delegates appear as <b>Event Dispatchers</b>.'},
+{t:'p',x:'The alternative is polling in <code>Tick()</code>: every frame, check whether health changed, and update the HUD if it did. That runs sixty times a second to detect an event that happens twice a minute. A delegate runs exactly when the thing happens.'},
+
+{t:'h',x:'Declaring a dynamic multicast delegate'},
+{t:'p',x:'Declared with a macro, above the class in the header. Suffixes select the parameter count: <code>_OneParam</code>, <code>_TwoParams</code>, and so on.'},
+{t:'code',x:`DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAttributeChanged,
+    AActor*, InstigatorActor,
+    URogueAttributeComponent*, OwningComp,
+    float, NewValue,
+    float, Delta);`},
+{t:'warn',lab:'Syntax trap',x:'Types and parameter names are separated by <b>commas</b>, not spaces. It reads as a flat comma-separated list, unlike a normal function signature. Getting this wrong produces macro errors that are famously unhelpful. Count your commas: with N params you have 2N + 1 entries.'},
+{t:'p',x:'Then the delegate becomes a member:'},
+{t:'code',x:`UPROPERTY(BlueprintAssignable, Category = "Attributes")
+FOnAttributeChanged OnHealthChanged;`},
+{t:'p',x:'<code>BlueprintAssignable</code> is the payoff — it exposes the event to Blueprint, where a designer can bind to it on the EventGraph without touching your code.'},
+
+{t:'h',x:'Broadcasting'},
+{t:'code',x:`OnHealthChanged.Broadcast(InstigatorActor, this, NewHealth, Delta);`},
+{t:'p',x:'"Multicast" means any number of listeners. Broadcast calls all of them.'},
+
+{t:'h',x:'Binding in C++'},
+{t:'code',x:`void ARogueAICharacter::PostInitializeComponents()
+{
+  Super::PostInitializeComponents();
+
+  AttributeComp->OnHealthChanged.AddDynamic(this, &ARogueAICharacter::OnHealthChanged);
+}`},
+{t:'p',x:'Same shape as the timer binding from Module 3: object to call on, then the address of the function. The bound function <b>must</b> be marked <code>UFUNCTION()</code> in the header — dynamic delegates dispatch by name through reflection, so an unreflected function is invisible to them.'},
+{t:'code',x:`UFUNCTION()
+void OnHealthChanged(AActor* InstigatorActor, URogueAttributeComponent* OwningComp,
+                     float NewHealth, float Delta);`},
+{t:'warn',lab:'Never bind in the constructor',x:'Bind in <code>PostInitializeComponents()</code> or <code>BeginPlay()</code>. Constructor bindings get <b>serialized into the Blueprint</b> — which means that if you later remove the binding from your C++, the Blueprint keeps calling it anyway. You end up debugging a binding that no longer exists in your source.'},
+{t:'p',x:'Unbinding is usually unnecessary: delegate references are weak, so destroyed objects do not keep them alive. Unbind only when you deliberately want to stop listening while still alive.'},
+{t:'chk',q:'Your bound function compiles fine but never fires. What is the first thing to check?',a:'Whether the function is marked <code><b>UFUNCTION()</b></code> in the header. <code>AddDynamic</code> resolves the target by name through the reflection system; without <code>UFUNCTION()</code> the function does not exist as far as reflection is concerned. Second thing to check: that you bound in <code>BeginPlay</code>/<code>PostInitializeComponents</code> and that the binding line actually runs.'},
+{t:'chk',q:'Why prefer a delegate over checking a value in Tick()?',a:'Cost and correctness. Polling burns work every frame to detect a rare change and can miss changes that happen and revert within one frame. A delegate fires exactly when and as often as the thing actually occurs.'},
+
+{t:'h',x:'Non-dynamic C++ delegates'},
+{t:'p',x:'When Blueprint does not need to see it, use the non-dynamic form — it is faster, since dynamic delegates pay for name-based reflection dispatch.'},
+{t:'code',x:`DECLARE_DELEGATE(FStreamableDelegate);   // declared by the engine`},
+{t:'p',x:'A real use: asynchronously loading an enemy asset and spawning it once loading finishes. Note that the delegate carries a <b>payload</b> — extra values captured now and delivered to the callback later.'},
+{t:'code',x:`if (UAssetManager* Manager = UAssetManager::GetIfValid())
+{
+  FPrimaryAssetId MonsterId = SelectedMonsterRow->MonsterId;
+  TArray<FName> Bundles;
+
+  // Capture MonsterId and a spawn location now; they arrive as arguments later.
+  FStreamableDelegate Delegate = FStreamableDelegate::CreateUObject(
+      this, &ARogueGameModeBase::OnMonsterLoaded, MonsterId, Locations[0]);
+
+  Manager->LoadPrimaryAsset(MonsterId, Bundles, Delegate);
+}
+
+// Called seconds later, once the asset is in memory
+void ARogueGameModeBase::OnMonsterLoaded(FPrimaryAssetId LoadedId, FVector SpawnLocation)`},
+{t:'chk',q:'Dynamic or non-dynamic — how do you choose?',a:'Ask one question: <b>does Blueprint need to bind to this?</b> If yes, dynamic multicast with <code>BlueprintAssignable</code>. If no, use a non-dynamic delegate — it avoids the reflection-based dispatch cost. Dynamic is a feature you pay for, not a default.'}
+],
+quiz:[
+{q:'What does <code>BlueprintAssignable</code> on a delegate property do?',
+ opts:['Lets Blueprint bind to the event on the EventGraph','Makes the delegate fire automatically','Replicates the delegate to clients','Prevents C++ from binding to it'],
+ c:0,why:'It exposes the delegate to Blueprint as an assignable event — the Event Dispatcher experience.'},
+{q:'Where should you bind delegates?',
+ opts:['The constructor','Tick()','PostInitializeComponents() or BeginPlay()','EndPlay()'],
+ c:2,why:'Constructor bindings serialize into Blueprints and persist even after you remove them from C++ — a genuinely nasty class of bug.'},
+{q:'A function bound with AddDynamic must be marked:',
+ opts:['virtual','static','const','UFUNCTION()'],
+ c:3,why:'Dynamic delegates dispatch by name via reflection. Without UFUNCTION() the function is not reflected and cannot be found.'},
+{q:'DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams takes how many entries after the delegate name?',
+ opts:['2 — one per parameter','4 — a type and a name per parameter','3','6'],
+ c:1,why:'Type and name are separate comma-separated entries: 2N for N parameters, plus the delegate type name.'},
+{q:'You need an internal C++-only callback with no Blueprint involvement. Best choice?',
+ opts:['A non-dynamic delegate — dynamic dispatch costs more','Dynamic multicast, for consistency','A public variable polled in Tick','A BlueprintNativeEvent'],
+ c:0,why:'Dynamic delegates are less performant. Use them only when you actually need Blueprint exposure.'},
+{q:'Do you normally have to unbind delegates when an actor is destroyed?',
+ opts:['Yes, always, or you leak memory','Only for non-dynamic delegates','No — delegate references are weak','Only in multiplayer'],
+ c:2,why:'They are weakly referenced, so destroyed objects are not kept alive. Manual unbinding is for when you want to stop listening while still alive.'}
+]
+},
+
+/* ---------------------------------------------------------- 8 */
+{
+grp:"Part IV — Conventions & Types",
+title:"Prefixes, Folders, and Project Naming",
+lede:"Unreal's naming is not decoration — the prefix is a type system you can read at a glance, and the compiler partly enforces it.",
+blocks:[
+{t:'h',x:'Class prefixes'},
+{t:'table',head:['Prefix','Meaning','Examples'],rows:[
+['<b>A</b>','Actor-derived — can be placed or spawned in a level','<code>AActor</code>, <code>APawn</code>, <code>AGameMode</code>'],
+['<b>U</b>','UObject-derived that is not an Actor','<code>UActorComponent</code>, <code>UGameplayStatics</code>, <code>UBlueprintFunctionLibrary</code>'],
+['<b>F</b>','Struct / plain value type','<code>FVector</code>, <code>FHitResult</code>, <code>FRotator</code>'],
+['<b>E</b>','Enum','<code>EEnvQueryStatus</code>, <code>EConstraintType</code>'],
+['<b>G</b>','Global','<code>GEngine</code>, <code>GWorld</code>'],
+['<b>T</b>','Template','<code>TArray&lt;T&gt;</code>, <code>TMap&lt;K,V&gt;</code>, <code>TSubclassOf&lt;T&gt;</code>']]},
+{t:'p',x:'Note the A/U relationship: <code>AActor</code> <i>does</i> derive from <code>UObject</code>, but takes the A prefix because "can exist in a level" is the more useful distinction to surface at the call site.'},
+{t:'aside',lab:'Trivia worth knowing',x:'Mike Fricker, Epic\'s Lead Technical Director, on the F: <i>"The \'F\' prefix actually stands for Float (as in Floating Point). Tim Sweeney wrote the original FVector class along with many of the original math classes, and the \'F\' prefix was useful to distinguish from math constructs that would support either integers or doubles, even before such classes were written."</i> Mid-nineties. The engine has been rewritten several times since and the convention outlived its own justification.'},
+{t:'chk',q:'You see <code>FTimerHandle</code>, <code>UAudioComponent</code>, and <code>ACharacter</code>. Which can you drag into a level?',a:'Only <code>ACharacter</code> — the A prefix means Actor-derived, and Actors are the things that exist in a world. <code>UAudioComponent</code> attaches to an Actor but is not itself placeable. <code>FTimerHandle</code> is a plain struct — just data.'},
+
+{t:'h',x:'The Actor ladder'},
+{t:'p',x:'The <code>A</code> prefix means Actor-<i>derived</i> anywhere up the chain — not "inherits directly from <code>AActor</code>". Most gameplay classes sit near the bottom of a stack:'},
+{t:'code',x:`UObject
+  |- AActor              exists in a level, has a transform, spawns/destroys, ticks
+      |- APawn           can be possessed by a Controller, receives input
+          |- ACharacter  capsule + skeletal mesh + CharacterMovementComponent
+              |- ARogueCharacter   your code`},
+{t:'p',x:'<code>ACharacter</code> earns its own <code>A</code> by descending from <code>AActor</code>, and your class inherits that family membership. Everything above your chosen rung comes for free — which means <b>choosing a base class is choosing where on this ladder to start</b>.'},
+{t:'table',head:['Base','You get','Pick it for'],rows:[
+['<code>AActor</code>','Transform, spawn/destroy, tick, replication','Chests, doors, pickups, projectiles, volumes'],
+['<code>APawn</code>','All of the above, plus possession by a Controller and input','Vehicles, drones, anything controlled but not humanoid'],
+['<code>ACharacter</code>','All of the above, plus capsule, skeletal mesh, walking, jumping, crouching, networked movement','Players and humanoid NPCs']]},
+{t:'p',x:'Pick the lowest rung that gives you what you need. A treasure chest has no business being an <code>ACharacter</code> — it would carry a movement component and possession machinery it will never use.'},
+{t:'aside',lab:'The name is free; the base class is the decision',x:'<p>You <i>could</i> rename <code>ARogueCharacter</code> to <code>ARogueActor</code> and keep <code>: public ACharacter</code>. It compiles and behaves identically — the engine does not care what you call it. But the name would lie: it advertises a plain Actor while the object actually carries a capsule, a skeletal mesh and a full movement component.</p><p>Changing <code>: public ACharacter</code> to <code>: public AActor</code> is an entirely different act. That drops three rungs and takes the movement, the mesh, the capsule and the possession with it. Names are for humans. The base class is the engineering.</p>'},
+{t:'warn',lab:'File names drop the prefix',x:'<code>ARogueCharacter</code> lives in <code>RogueCharacter.h</code> and <code>RogueCharacter.cpp</code> — the same way <code>AActor</code> lives in <code>Actor.h</code>. The class wizard does this for you and it looks like a bug the first time you see it.'},
+{t:'chk',q:'A treasure chest sits in the level, has a static mesh, and can be interacted with — but never moves and is never possessed. Which base?',a:'<code><b>AActor</b></code>. It needs a transform and a place in the world; it needs nothing from <code>APawn</code> or <code>ACharacter</code>. Looman\'s equivalent is <code>ARogueItemChest : public AActor</code> — the class you saw adopting the interface in Module 6.'},
+{t:'chk',q:'Does the <code>A</code> in <code>ARogueCharacter</code> tell you it derives directly from <code>AActor</code>?',a:'<b>No</b> — only that it is somewhere in the Actor family. Here it is four levels down: <code>AActor</code> &rarr; <code>APawn</code> &rarr; <code>ACharacter</code> &rarr; <code>ARogueCharacter</code>. The prefix tells you the family, not the parent.'},
+
+{t:'h',x:'Project prefixes'},
+{t:'p',x:'On top of the type prefix, every project uses its own short prefix so a class name announces its origin. Unreal Tournament uses UT (<code>AUTActor</code>), Fortnite uses Fort (<code>AFortActor</code>), Looman\'s sample project uses Rogue (<code>ARogueCharacter</code>).'},
+{t:'p',x:'The combination reads as: <code>A</code> + <code>Rogue</code> + <code>Character</code>. Adopt one early — renaming classes later is possible (Module 14, Core Redirects) but tedious.'},
+
+{t:'h',x:'Public and Private folders'},
+{t:'p',x:'The class wizard offers to split files into <code>/Public/YourClass.h</code> and <code>/Private/YourClass.cpp</code>. This is <b>module-level visibility</b>, not C++ access specifiers:'},
+{t:'list',x:[
+'<b>Public/</b> — headers other modules are allowed to include.',
+'<b>Private/</b> — .cpp files, plus any headers that are internal to this module.']},
+{t:'p',x:'If nothing else will ever depend on your primary game module — normal for a solo project — you do not need this structure. It becomes valuable the moment you split into multiple modules.'},
+{t:'chk',q:'Is a class in Private/ the same thing as a class marked private:?',a:'<b>No.</b> They operate at different levels. <code>private:</code> controls which <i>classes</i> may touch a member. The Private folder controls which <i>modules</i> may include a header. A class in Private/ can have plenty of public members — they are just unreachable from outside the module.'}
+],
+quiz:[
+{q:'What does the F in FVector stand for, historically?',
+ opts:['Float','Framework','Fundamental','Fast'],
+ c:0,why:'Floating Point — Tim Sweeney\'s original math classes, mid-1990s. The convention outlived the reason.'},
+{q:'AActor derives from UObject. Why is it not UActor?',
+ opts:['It does not actually derive from UObject','A marks the more useful distinction: it can exist in a level','A stands for Abstract','Historical accident with no meaning'],
+ c:1,why:'The prefix surfaces the practically important property — placeability in a world — rather than the base-most ancestry.'},
+{q:'You are writing a struct to hold damage information. What should it be called?',
+ opts:['UDamageInfo','ADamageInfo','FDamageInfo','TDamageInfo'],
+ c:2,why:'F is the struct prefix. With a project prefix it becomes something like FRogueDamageInfo.'},
+{q:'What do Public/ and Private/ folders control?',
+ opts:['C++ access specifiers','Whether the class ships in the final build','Whether Blueprint can see the class','Which headers other modules may include'],
+ c:3,why:'Module-level visibility. Entirely separate from public:/private: inside a class.'},
+{q:'<code>TSubclassOf&lt;T&gt;</code> starts with T because it is:',
+ opts:['A type alias','A transient property','A template','An Actor type'],
+ c:2,why:'T is the template prefix — the same family as TArray, TMap, TWeakObjectPtr.'},
+{q:'The <code>A</code> in <code>ARogueCharacter</code> tells you that it:',
+ opts:['Descends from AActor somewhere in its chain','Derives directly from AActor','Is an abstract class','Cannot be subclassed in Blueprint'],
+ c:0,why:'Family membership, not parentage. Here it is four levels down: AActor to APawn to ACharacter to ARogueCharacter.'},
+{q:'You rename <code>ARogueCharacter</code> to <code>ARogueActor</code> but leave <code>: public ACharacter</code> untouched. What happens?',
+ opts:['It fails to compile','The base class silently changes to AActor','The movement component is removed','It compiles and behaves identically, but the name now misleads every future reader'],
+ c:3,why:'The name is free; the base class is the engineering. Changing the base to AActor would be the substantive act, and would cost you the capsule, mesh and movement component.'}
+]
+},
+
+/* ---------------------------------------------------------- 9 */
+{
+grp:"Part IV — Conventions & Types",
+title:"Engine Types You Will Use Daily",
+lede:"Three kinds of string, three ways to describe rotation, three containers, and one template that trips up everyone at least once.",
+blocks:[
+{t:'h',x:'FString, FName, FText — pick correctly or pay later'},
+{t:'table',head:['Type','What it is','Use for'],rows:[
+['<code>FString</code>','A mutable string. Easy to manipulate, relatively expensive to compare.','Debugging, logging, raw data passed between systems, REST payloads.'],
+['<code>FName</code>','A hashed, immutable string. Comparison is effectively an integer compare.','Lookups: socket names on a skeletal mesh, GameplayTags, animation section names.'],
+['<code>FText</code>','A localisable, front-facing string.','<b>Anything a player reads.</b> Every single piece of UI text.']]},
+{t:'warn',lab:'The classic mistake',x:'Using <code>FString</code> for UI text. It works, ships, and looks fine — until localisation, at which point every one of those strings is invisible to the translation pipeline and has to be found and converted by hand. If a human being will read it on screen, it is <code>FText</code>. Decide this on day one.'},
+{t:'chk',q:'Socket name on a skeletal mesh, a damage number shown in the HUD, and a log line for debugging. Which type for each?',a:'Socket name → <b>FName</b> (fixed identifier, compared constantly, hashing pays off).<br>HUD damage number → <b>FText</b> (a player reads it; number formatting is locale-dependent too).<br>Debug log → <b>FString</b> (throwaway, manipulated freely, never localised).'},
+
+{t:'h',x:'A note on int'},
+{t:'p',x:'Do not use plain <code>int</code> in serialized UPROPERTYs. Its size varies by platform, and a serialized property whose width changes between platforms is a corruption bug waiting to happen. Unreal supplies explicitly sized types: <code>int32</code>, <code>int16</code>, <code>uint8</code>, <code>uint16</code>. <code>int32</code> is your default integer.'},
+
+{t:'h',x:'Spatial types'},
+{t:'list',x:[
+'<code>FVector</code> — XYZ, <b>Z is up</b> in Unreal. Represents a location or a direction.',
+'<code>FRotator</code> — Pitch, Yaw, Roll. Human-readable, what you use in gameplay code.',
+'<code>FTransform</code> — Location (FVector) + Rotation (FRotator) + Scale (FVector). Every Actor has one.',
+'<code>FQuat</code> — a quaternion. Avoids gimbal lock, used inside engine modules, not exposed to Blueprint. You will rarely author one directly.']},
+{t:'p',x:'A line trace needs two <code>FVector</code>s: start and end. That is the most common place a beginner meets these.'},
+
+{t:'h',x:'Containers'},
+{t:'table',head:['Type','Shape','When'],rows:[
+['<code>TArray&lt;T&gt;</code>','Ordered list','Your default. Use this unless you have a reason not to.'],
+['<code>TMap&lt;K,V&gt;</code>','Dictionary, unique keys','Look up a value by an identifier.'],
+['<code>TSet&lt;T&gt;</code>','Hashed set, unique elements','Membership tests and deduplication at scale.']]},
+
+{t:'h',x:'TSubclassOf&lt;T&gt;'},
+{t:'p',x:'Holds a <b>class</b>, not an instance. This is the mechanism that lets a designer choose <i>what to spawn</i> from the editor while your C++ owns <i>when and how</i> to spawn it.'},
+{t:'code',x:`UPROPERTY(EditAnywhere)
+TSubclassOf<AProjectileActor> ProjectileClass;   // designer assigns BP_MagicProjectile
+
+// ...later, at fire time
+FTransform SpawnTM = FTransform(ProjRotation, HandLocation);
+GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnTM, SpawnParams);`},
+{t:'p',x:'The template argument constrains the dropdown: the designer is offered only classes deriving from <code>AProjectileActor</code>. Type safety and a good editor experience from one declaration.'},
+{t:'chk',q:'What is the difference between <code>AProjectileActor* Projectile</code> and <code>TSubclassOf&lt;AProjectileActor&gt; ProjectileClass</code>?',a:'The first points at <b>an actual projectile existing in the world</b>. The second holds <b>the class itself</b> — the blueprint, in the ordinary sense of the word — from which projectiles can be made. You cannot call <code>Explode()</code> on a <code>TSubclassOf</code>; there is nothing there to explode yet. You pass it to <code>SpawnActor</code> to produce an instance.'}
+],
+quiz:[
+{q:'Text displayed to the player should be:',
+ opts:['FString','FName','const char*','FText'],
+ c:3,why:'FText is the only localisable type. Using FString here creates a large, tedious cleanup later.'},
+{q:'Why does Unreal prefer int32 over int in UPROPERTYs?',
+ opts:['int32 is faster','int size varies by platform, which breaks serialization portability','int is not supported by the compiler','int32 uses less memory'],
+ c:1,why:'Explicit widths keep serialized data consistent across platforms.'},
+{q:'FName is best suited to:',
+ opts:['Long text the player reads','Strings that change every frame','Frequently compared identifiers like socket names','Numeric IDs'],
+ c:2,why:'FNames are hashed and immutable, making comparison very cheap — ideal for fixed lookup keys.'},
+{q:'<code>TSubclassOf&lt;AProjectileActor&gt;</code> holds:',
+ opts:['A class that derives from AProjectileActor','A spawned projectile in the world','An array of projectiles','A weak pointer to a projectile'],
+ c:0,why:'A class reference, not an instance. Feed it to SpawnActor to get an instance.'},
+{q:'Which axis is up in an FVector?',
+ opts:['X','Y','Z','Depends on project settings'],
+ c:2,why:'Unreal is Z-up. Worth internalising early — it differs from several other engines.'}
+]
+},
+
+/* ---------------------------------------------------------- 10 */
+{
+grp:"Part V — The Engine Layer",
+title:"Macros and the Unreal Property System",
+lede:"UCLASS, UPROPERTY, UFUNCTION. These are not decoration — they are how your C++ becomes visible to the editor, the serializer, the garbage collector, and Blueprint.",
+blocks:[
+{t:'h',x:'Reflection, briefly'},
+{t:'p',x:'Standard C++ has no runtime knowledge of its own types. You cannot ask a C++ object what its members are called. Unreal needs exactly that — to draw a details panel, save a level, replicate a variable, or expose a function to Blueprint.'},
+{t:'p',x:'So Epic built a reflection system on top. Unreal Header Tool parses your headers before compilation, finds the macros, and generates the code that registers your types. That generated code is what <code>GENERATED_BODY()</code> injects, and it is why your header must include <code>YourClass.generated.h</code> <b>last</b>.'},
+{t:'aside',lab:'What the markup actually buys you',x:'A single <code>UPROPERTY()</code> potentially enables all of: appearing in the details panel, saving/loading with the level, participating in garbage collection reference counting, network replication, Blueprint access, and property-change callbacks in the editor. An unmarked member gets <b>none</b> of that. It is a plain C++ variable the engine cannot see — which is exactly the cause of the dangling-pointer bug in Module 13.'},
+
+{t:'h',x:'UCLASS, USTRUCT, UENUM, GENERATED_BODY'},
+{t:'code',x:`UCLASS()
+class ACTIONROGUELIKE_API ARogueCharacter : public ACharacter
+{
+  GENERATED_BODY()
+  // ...
+};
+
+USTRUCT(BlueprintType)
+struct FMyStruct
+{
+  GENERATED_BODY()
+};`},
+{t:'p',x:'The wizard writes these for you. <code>BlueprintType</code> on a struct is what makes it usable as a Blueprint variable type.'},
+
+{t:'h',x:'UPROPERTY'},
+{t:'code',x:`// Editable defaults on the class; Blueprint graphs get read-only access
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+TSoftObjectPtr<UTexture2D> Icon;
+
+// Synchronised from server to clients in multiplayer
+UPROPERTY(Replicated)
+URogueActionComponent* ActionComp;`},
+{t:'table',head:['Specifier','Effect'],rows:[
+['<code>EditAnywhere</code>','Editable on the class defaults <i>and</i> on each placed instance.'],
+['<code>EditDefaultsOnly</code>','Editable on the class defaults only — not per-instance.'],
+['<code>VisibleAnywhere</code>','Shown but not editable. Typical for components.'],
+['<code>BlueprintReadOnly</code>','Blueprint graphs can read it, not write it.'],
+['<code>BlueprintReadWrite</code>','Blueprint graphs can read and write it.'],
+['<code>Replicated</code>','Participates in network replication.'],
+['<code>Category = "…"</code>','Groups it in the details panel. Do this; it costs nothing and future-you will care.']]},
+{t:'chk',q:'A designer should set a projectile\'s damage per-class but never per-placed-instance. Which specifier?',a:'<code>EditDefaultsOnly</code>. <code>EditAnywhere</code> would let someone tweak one placed instance in one level and produce a bug that reproduces nowhere else — a genuinely miserable thing to track down.'},
+
+{t:'h',x:'UFUNCTION'},
+{t:'code',x:`// Callable from Blueprint
+UFUNCTION(BlueprintCallable, Category = "Action")
+bool IsRunning() const;
+
+// C++ provides the implementation; Blueprint may override or extend.
+// Cannot be called from Blueprint.
+UFUNCTION(BlueprintNativeEvent, Category = "Action")
+void StartAction(AActor* Instigator);`},
+{t:'p',x:'Beyond Blueprint exposure, the engine sometimes <i>requires</i> <code>UFUNCTION()</code> — most notably for any function bound to a dynamic delegate (Module 7).'},
+{t:'chk',q:'Your delegate binding compiles but the callback never runs, and the function has no UFUNCTION() macro. Connected?',a:'<b>Directly.</b> <code>AddDynamic</code> looks the function up by name through reflection. Without <code>UFUNCTION()</code>, UHT never registered it, so there is nothing to find. The compiler cannot warn you because the macro-generated lookup is a string.'},
+
+{t:'h',x:'UE_LOG'},
+{t:'code',x:`UE_LOG(LogTemp, Log, TEXT("Just a simple log print"));
+
+UE_LOG(LogAI, Warning, TEXT("X went wrong in Actor %s"), *GetName());`},
+{t:'p',x:'Arguments are: <b>category</b> (LogTemp, LogAI, LogGame…), <b>verbosity</b> (Log, Warning, Error, Verbose), then a <code>TEXT()</code> format string and its arguments.'},
+{t:'warn',lab:'That asterisk is not a pointer',x:'<code>*GetName()</code> looks like a dereference and is not. <code>GetName()</code> returns an <code>FString</code>; <code>FString</code> overloads <code>operator*</code> to yield the underlying character array, which is what the variadic macro requires. Any time you feed an <code>FString</code> into <code>UE_LOG</code>, it needs the <code>*</code>. Forgetting it produces a compile error that reads like nonsense.'},
+{t:'p',x:'Log the <i>values</i>, not just the fact that you got somewhere. "Reached OnHealthChanged" tells you almost nothing; "OnHealthChanged: %s now at %f (delta %f)" tells you what actually went wrong.'}
+],
+quiz:[
+{q:'What does GENERATED_BODY() do?',
+ opts:['Injects engine boilerplate produced by Unreal Header Tool for reflection','Generates the constructor','Marks the class abstract','Exposes every member to Blueprint'],
+ c:0,why:'It is the insertion point for UHT-generated reflection code — which is also why the .generated.h include must come last.'},
+{q:'Which UPROPERTY specifier allows editing on class defaults but NOT on individual placed instances?',
+ opts:['EditAnywhere','EditDefaultsOnly','VisibleAnywhere','EditInstanceOnly'],
+ c:1,why:'EditDefaultsOnly locks per-instance editing, preventing one-off tweaks that only reproduce in a single level.'},
+{q:'Why does <code>*GetName()</code> have an asterisk in a UE_LOG call?',
+ opts:['GetName returns a pointer that must be dereferenced','It marks the argument as optional','FString overloads operator* to return the raw character array the macro needs','It prevents a copy of the string'],
+ c:2,why:'It is an operator overload, not pointer dereferencing — a genuine source of confusion for people who know standard C++.'},
+{q:'A member variable with no UPROPERTY() macro:',
+ opts:['Behaves identically to one with it','Is automatically read-only','Will not compile','Is invisible to the editor, serialization, replication and garbage collection'],
+ c:3,why:'The macro is what makes the member exist as far as the engine is concerned. Unmarked members are plain C++ the engine cannot track.'},
+{q:'<code>BlueprintNativeEvent</code> on a function means Blueprint can:',
+ opts:['Override or extend it but not call it','Call it but not override it','Neither','Both call and override it'],
+ c:0,why:'Native implementation with Blueprint override capability. Add BlueprintCallable if you also want it callable.'}
+]
+},
+
+/* ---------------------------------------------------------- 11 */
+{
+grp:"Part V — The Engine Layer",
+title:"Modules",
+lede:"Unreal is over a thousand modules. Yours is one of them, and eventually you will need to tell it about another.",
+blocks:[
+{t:'h',x:'What a module is'},
+{t:'p',x:'A module is a unit of compilation and dependency with its own <code>YourModule.build.cs</code> describing what it needs. Your game code lives in one — or, as it grows, several. Engine modules live under your engine install (for example <code>Engine\\Source\\Runtime\\AIModule</code>).'},
+
+{t:'h',x:'The problem you will actually hit'},
+{t:'p',x:'Not every module is available by default. You write code using an AI class, and it will not compile — not because of a typo, but because your module has never declared a dependency on <code>AIModule</code>. The fix is in the build file:'},
+{t:'code',x:`PublicDependencyModuleNames.AddRange(new string[] {
+    "Core", "CoreUObject", "Engine", "InputCore",
+    "AIModule", "GameplayTasks", "UMG", "GameplayTags",
+    "OnlineSubsystem", "DeveloperSettings" });`},
+{t:'p',x:'Note that <code>.build.cs</code> is C#, not C++, and is executed by Unreal Build Tool. Dependencies can also be added via the <code>.uproject</code> — the editor does this automatically under <code>AdditionalDependencies</code> when you create a class deriving from a module you do not yet reference.'},
+{t:'chk',q:'You add a <code>UBehaviorTree</code> member and get "unresolved external symbol" or an unknown-type error. Is your code wrong?',a:'Probably not — you have most likely not added <b>AIModule</b> to <code>PublicDependencyModuleNames</code> in your <code>.build.cs</code>. This is one of the highest-frequency early stumbles in Unreal C++, and the error message rarely says "add a module dependency".'},
+
+{t:'h',x:'Why AIModule, specifically'},
+{t:'p',x:'That example list is not a settings menu of features to switch on. Each entry is there because the project genuinely uses something from it. <code>AIModule</code> is on the list because the AI classes physically live there:'},
+{t:'list',x:[
+'<code>AAIController</code> — the brain that possesses an enemy pawn',
+'Behavior Trees — <code>UBehaviorTree</code>, <code>UBehaviorTreeComponent</code>, <code>UBTTaskNode</code>, <code>UBTService</code>, <code>UBTDecorator</code>',
+'Blackboards — <code>UBlackboardComponent</code>, <code>UBlackboardData</code>',
+'AI Perception — <code>UAIPerceptionComponent</code>, <code>UAISense_Sight</code>, <code>UAISense_Hearing</code>',
+'EQS (Environment Query System) and <code>UPathFollowingComponent</code>']},
+{t:'p',x:'Your game module starts with roughly <code>Core</code>, <code>CoreUObject</code>, <code>Engine</code> and <code>InputCore</code> — the minimum to be a game. Unreal also ships architectural visualisation, linear film work and motion graphics, none of which should pay compile time and link size for a behaviour tree system they never touch. So the default is lean and you opt in.'},
+{t:'p',x:'Read the rest of that list the same way and it stops looking like boilerplate: <code>UMG</code> because the project has widgets, <code>GameplayTags</code> because it uses tags, <code>DeveloperSettings</code> because it defines project settings, <code>AIModule</code> because it has enemies. The dependency list is a genuine piece of documentation about what your game is made of.'},
+{t:'warn',lab:'Two errors, one cause',x:'<p>A missing module dependency surfaces two different ways:</p><p><b>Compile</b> — "cannot open include file: BehaviorTree/BehaviorTree.h". The include paths were never added.<br><b>Link</b> — "unresolved external symbol". The header resolved through some transitive path, but the library itself is not linked.</p><p>Neither message says "add a module dependency", which is why this eats an afternoon the first time.</p>'},
+
+{t:'h',x:'Public versus Private dependencies'},
+{t:'table',head:['List','Meaning'],rows:[
+['<code>PublicDependencyModuleNames</code>','Needed by your <b>headers</b>. Anything depending on your module inherits it.'],
+['<code>PrivateDependencyModuleNames</code>','Needed only inside your <b>.cpp</b> files. Not propagated to dependents.']]},
+{t:'p',x:'Prefer Private wherever the work allows.'},
+{t:'aside',lab:'The same idea as forward declaration, one level up',x:'A header exposes its includes to everything downstream (Module 4). A public module dependency exposes itself to every module downstream. Both are the same instinct at different scales: keep your dependency surface as small as the job permits. If the type never appears in your public interface, nobody downstream needs to know it exists.'},
+{t:'chk',q:'You use <code>UBehaviorTree</code> only inside your <code>.cpp</code>, never in a header. Public or Private?',a:'<b>Private.</b> Nothing in your public interface mentions the type, so no module depending on you needs to know about AIModule. Exactly the reasoning behind forward declaring in a header and including in the source.'},
+
+{t:'h',x:'Why split into modules'},
+{t:'list',x:[
+'Encapsulation — enforced boundaries between systems rather than convention alone.',
+'Reuse — lift a framework module into your next project intact.',
+'Ship only what you use — editor-only functionality can be excluded from builds.',
+'Faster compilation and linking.',
+'Control over what loads and when.']},
+{t:'aside',lab:'For a solo project',x:'You almost certainly do not need multiple modules yet. One game module is correct until you have a body of genuinely reusable framework code and a reason to keep it separate from game-specific content. What you <i>do</i> need immediately is the ability to recognise a missing-module error and know that <code>.build.cs</code> is where you fix it.'}
+],
+quiz:[
+{q:'Where do you declare that your module depends on AIModule?',
+ opts:['In the .uproject only','In DefaultEngine.ini','In YourModule.build.cs, in PublicDependencyModuleNames','In the class header'],
+ c:2,why:'The build file is the primary place. The .uproject can also carry dependencies, and the editor adds some there automatically.'},
+{q:'What language is a .build.cs file?',
+ opts:['C++','C#','Python','JSON'],
+ c:1,why:'C#, executed by Unreal Build Tool.'},
+{q:'Which is NOT a stated benefit of splitting code into modules?',
+ opts:['Faster compilation and linking','Reuse across projects','Shipping only the modules you use','Automatically better runtime frame rate'],
+ c:3,why:'Modules are a build and organisation tool. They affect what is loaded and how fast you compile, not raw frame time.'},
+{q:'A type appears only inside your <code>.cpp</code> files, never in a header. Which list should the module go in?',
+ opts:['PrivateDependencyModuleNames','PublicDependencyModuleNames','Both lists, to be safe','Neither — .cpp usage needs no dependency'],
+ c:0,why:'Nothing downstream needs to know the type exists. Same instinct as forward declaring in the header and including in the source.'},
+{q:'Why is AIModule not enabled by default?',
+ opts:['It is deprecated in UE5','It requires a separate licence','It conflicts with the Engine module','Plenty of Unreal projects — archviz, film, motion graphics — have no AI, and should not pay compile and link cost for it'],
+ c:3,why:'The default game module is deliberately lean: Core, CoreUObject, Engine, InputCore. You opt into the rest.'}
+]
+},
+
+/* ---------------------------------------------------------- 12 */
+{
+grp:"Part VI — Lifetime & Memory",
+title:"Garbage Collection and Object Lifetime",
+lede:"Unreal manages memory for UObjects — but only for the references it can see. Making your references visible is your job, and it is one line.",
+blocks:[
+{t:'h',x:'How GC works'},
+{t:'p',x:'Unreal runs garbage collection roughly every 60 seconds by default, clearing objects nothing references any more. You do not <code>delete</code> UObjects.'},
+{t:'p',x:'For this to work, the engine must be able to <b>find</b> your references. That is what <code>UPROPERTY()</code> does for a pointer — it enters the reference graph.'},
+{t:'code',x:`UPROPERTY()
+TObjectPtr<AActor> FocusedActor;`},
+{t:'warn',lab:'The bug this prevents',x:'An unmarked pointer member is invisible to GC. Two failure modes follow: the object it points at may be collected out from under you while you still hold the pointer (you now hold garbage), and it will never be automatically nulled. Rule: <b>if a UObject pointer is a member of a class, it wants a UPROPERTY()</b> — even an empty one with no specifiers.'},
+{t:'chk',q:'Why does a bare <code>UPROPERTY()</code> with no specifiers still matter?',a:'The specifiers control <i>editor and Blueprint</i> behaviour. The macro itself is what registers the property with the reflection and GC systems. An empty <code>UPROPERTY()</code> exposes nothing to anyone but makes the reference visible to the garbage collector — which is frequently the entire reason it is there.'},
+
+{t:'h',x:'Automatic nulling — and its limits'},
+{t:'p',x:'References to destroyed <b>Actors and ActorComponents</b> can be automatically nulled, provided the pointer is a <code>UPROPERTY()</code>. It does not extend to arbitrary UObjects.'},
+{t:'p',x:'The timing matters. Ari Arnbjörnsson: <i>"Destroyed actors don\'t have references to them nulled until they\'re actually garbage collected. That\'s what IsValid(yourobject) is used for checking."</i>'},
+{t:'p',x:'So between <code>Destroy()</code> and the next GC pass there is a window in which your pointer is non-null and the actor is dead. <code>IsValid()</code> covers that window; a bare null check does not.'},
+{t:'warn',lab:'Changing in UE5',x:'<i>"This will be changing a bit in UE5. The GC will no longer clear UPROPERTY + RawPtr/TObjectPtr references (even for Actors) but instead mark them as garbage (MarkAsGarbage()) and not GC them. The only way to clear the memory will be to null the reference or use weak pointers."</i> — Ari Arnbjörnsson. Practical upshot: lean on <code>IsValid()</code> rather than <code>!= nullptr</code>, and reach for weak pointers where you genuinely do not want to own the object.'},
+{t:'chk',q:'You destroyed an actor two frames ago and hold a UPROPERTY pointer to it. Is <code>if (MyActor)</code> safe?',a:'<b>Not reliably.</b> Nulling does not happen at destruction — it happens at collection, which may be up to a minute away. The pointer is still non-null while the actor is dead. Use <code>if (IsValid(MyActor))</code>, which checks both null and pending-kill/garbage state.'},
+
+{t:'h',x:'TWeakObjectPtr&lt;T&gt;'},
+{t:'p',x:'A weak pointer says: I want to reference this object, but I do not want to keep it alive. If everyone else lets go, it should be collected.'},
+{t:'code',x:`TWeakObjectPtr<UGameAbility> MyReferencedAbility;
+
+// Must resolve through .Get() before use
+UGameAbility* Ability = MyReferencedAbility.Get();
+if (Ability)
+{
+}`},
+{t:'p',x:'<code>.Get()</code> either returns a valid object or <code>nullptr</code> if it has been destroyed. That safety is the point — you cannot accidentally use a stale weak pointer without going through the check.'},
+{t:'chk',q:'A cached "last actor that damaged me" reference — hard UPROPERTY or weak pointer?',a:'<b>Weak pointer.</b> A cache is not ownership. A hard reference would keep a dead enemy in memory indefinitely just because you remembered it hit you once. A weak pointer lets it die and hands you null when you next ask for it.'},
+
+{t:'h',x:'The Class Default Object'},
+{t:'p',x:'Every class has a CDO — an automatically-created default instance used as the template for new instances. You can read from it without constructing anything:'},
+{t:'code',x:`const URogueSaveGameSettings* Settings = GetDefault<URogueSaveGameSettings>();
+CurrentSlotName = Settings->SaveSlotName;`},
+{t:'warn',lab:'Do not write to the CDO',x:'Modifying the CDO bleeds into every instance created afterwards. Note the <code>const</code> in the example — that is deliberate, and it is the habit to copy.'},
+
+{t:'h',x:'GC and frame time'},
+{t:'p',x:'Collection is not free. Creating and destroying many objects at runtime — projectiles, impact effects, pickups — can produce visible hitches when a GC pass runs. The standard mitigation is <b>object pooling</b>: create a fixed set once, deactivate and reuse instead of destroying and respawning.'}
+],
+quiz:[
+{q:'Why add UPROPERTY() to a UObject pointer member even with no specifiers?',
+ opts:['To make the reference visible to the garbage collector','To expose it to Blueprint','To make it const','It has no effect without specifiers'],
+ c:0,why:'The macro registers the property with reflection and GC. Specifiers are a separate concern layered on top.'},
+{q:'You destroyed an actor. When is your UPROPERTY pointer to it nulled?',
+ opts:['Immediately on Destroy()','At the end of the frame','When garbage collection actually runs','Never'],
+ c:2,why:'Hence IsValid() rather than a plain null check — there is a real window where the pointer is non-null and the actor is dead.'},
+{q:'What does TWeakObjectPtr express?',
+ opts:['A reference that keeps the object alive','A reference that does not keep the object alive and may become invalid','A pointer that is thread-safe','A pointer to an asset on disk'],
+ c:1,why:'Reference without ownership. Resolve with .Get() and check the result.'},
+{q:'How do you safely use a TWeakObjectPtr?',
+ opts:['Dereference it directly with -&gt;','Mark it UPROPERTY()','Cast it first','Call .Get() and null-check the result'],
+ c:3,why:'.Get() returns the object or nullptr, which is exactly the check you need.'},
+{q:'What is the risk of modifying a Class Default Object?',
+ opts:['The change bleeds into every instance created afterwards','It crashes immediately','It is discarded on the next GC','It only affects Blueprint subclasses'],
+ c:0,why:'The CDO is the template new instances are built from. Read it with GetDefault&lt;T&gt;() and treat it as const.'},
+{q:'Frequent runtime spawning and destroying can cause:',
+ opts:['Memory leaks Unreal cannot recover from','Replication failures','Blueprint compilation errors','GC hitches consuming a large chunk of frame time'],
+ c:3,why:'Collection costs frame time. Object pooling is the usual answer for high-churn objects.'}
+]
+},
+
+/* ---------------------------------------------------------- 13 */
+{
+grp:"Part VI — Lifetime & Memory",
+title:"Asserts, and Core Redirects",
+lede:"How to make broken states announce themselves immediately — and how to rename C++ without breaking every Blueprint that referenced it.",
+blocks:[
+{t:'h',x:'check and ensure'},
+{t:'p',x:'This closes the loop opened in Module 1. When null is <i>not</i> an acceptable state, an assert is what you write instead of a silent guard.'},
+{t:'code',x:`check(MyValue == 1);        // FATAL if false — halts execution
+check(MyActorPointer);
+
+if (ensure(MyActorPointer))  // non-fatal — logs, breaks in the debugger, continues
+{
+}`},
+{t:'table',head:['','check','ensure'],rows:[
+['On failure','Fatal — stops the game','Non-fatal — reports and continues'],
+['Frequency','Every time','Once per session (<code>ensureAlways</code> for every time)'],
+['Typical use','Truly unrecoverable state','Suspicious state you want reported but can survive'],
+['In an if-statement','Not usually','Yes — <code>if (ensure(Ptr))</code> is idiomatic']]},
+{t:'p',x:'Both are <b>compiled out of shipping builds</b> by default. They cost your players nothing, so there is no performance argument for omitting them during development.'},
+{t:'chk',q:'What does <code>if (ensure(MyPointer))</code> give you that <code>if (MyPointer)</code> does not?',a:'A <b>report</b>. Both branch identically, but <code>ensure</code> also logs, generates a callstack and breaks in an attached debugger. The plain check fails silently and you learn nothing. Same control flow, vastly more information.'},
+{t:'chk',q:'Should you assert when a designer forgot to assign an asset?',a:'Usually <b>no</b>. Looman\'s guidance: asserts are best for <i>coder</i> mistakes. To a designer without a debugger attached, an assert looks like an unexplained crash or a long stall while a minidump is written, and tells them nothing actionable. A screen message or log naming the missing asset is far more useful. (He notes he still uses asserts for content in solo or very small team projects — where the coder and the designer are the same person, which describes you.)'},
+{t:'warn',lab:'Do not assert in hot paths',x:'An <code>ensureAlways</code> inside <code>Tick</code> will flood you with reports and can stall the editor generating dumps. Prefer <code>ensure</code> (once per session) for anything that might fire repeatedly.'},
+
+{t:'h',x:'Core Redirects'},
+{t:'p',x:'You rename a C++ class, function, property or enum value. Every Blueprint that referenced the old name now has a broken node. Core Redirects are the <code>.ini</code>-based mapping from old name to new one, and they save you from manually repairing dozens of assets.'},
+{t:'p',x:'They cover classes, functions, properties, enums, structs and packages. Modern IDEs with real Unreal support — JetBrains Rider in particular — can generate them for you when you refactor Blueprint-exposed code.'},
+{t:'aside',lab:'Why to learn this before you need it',x:'This is a rescue tool that only exists if you knew about it in advance. The moment you discover you need it is the moment you have already renamed something and are staring at forty broken Blueprints. Knowing the feature exists — and knowing that renaming a C++ symbol referenced by Blueprints is a non-trivial operation — is 90% of the benefit. Which is also an argument for settling on your project prefix (Module 8) now, while a rename is still cheap.'},
+{t:'chk',q:'You renamed <code>ARogueCharacter</code> to <code>AHasardCharacter</code> and your Blueprints are broken. Options?',a:'Either repair each Blueprint by hand, or add a <b>Core Redirect</b> in your <code>.ini</code> mapping the old class name to the new one so existing assets resolve automatically. The redirect is faster, reversible, and does not risk missing a reference.'}
+],
+quiz:[
+{q:'Difference between check() and ensure()?',
+ opts:['check is for pointers, ensure for booleans','check is fatal; ensure reports and allows execution to continue','ensure is fatal; check is not','They are identical'],
+ c:1,why:'Fatal versus non-fatal. ensure also fires only once per session unless you use ensureAlways.'},
+{q:'Do asserts hurt shipping performance?',
+ opts:['No — they are compiled out of shipping builds by default','Yes, significantly','Only check() does','Only in multiplayer'],
+ c:0,why:'They cost nothing in a shipped build, so there is no reason to be sparing with them during development.'},
+{q:'How often does ensure() trigger?',
+ opts:['Every time the condition fails','Only in the editor','Once per level load','Once per session'],
+ c:3,why:'Once per session. ensureAlways triggers every time — use it deliberately, not in hot paths.'},
+{q:'What are Core Redirects for?',
+ opts:['Redirecting network traffic','Redirecting log output to a file','Mapping old C++ names to new ones so existing Blueprints and assets keep resolving after a rename','Loading assets asynchronously'],
+ c:2,why:'A refactoring tool configured in .ini files — the thing that makes renaming Blueprint-exposed C++ survivable.'},
+{q:'Best practice when a designer has not assigned a required asset?',
+ opts:['A log or on-screen message naming what is missing','check() so it fails hard','Silently do nothing','ensureAlways() in Tick'],
+ c:0,why:'Asserts are for coder errors. A designer without a debugger just sees a crash; a message tells them what to fix.'}
+]
+},
+
+/* ---------------------------------------------------------- 14 */
+{
+grp:"Assessment",
+title:"Final Examination",
+lede:"Fifteen questions across the whole course. No hints in the text — answer, then read the reasoning. 12 or better is a pass.",
+blocks:[
+{t:'p',x:'Take this without scrolling back. If you score below 12, the explanations will tell you which modules to revisit — go back and reread those specifically rather than the whole course.'}
+],
+quiz:[
+{q:'Forward declaring a class in a header rather than including it primarily improves what?',
+ opts:['Runtime frame rate','Blueprint load times','Memory usage in shipping builds','Compile times and dependency coupling'],
+ c:3,why:'Build-time only. Identical machine code — the win is that fewer files rebuild when something changes. [Module 4]'},
+{q:'When should you NOT write a null check?',
+ opts:['When the pointer is a UPROPERTY','When null represents a broken state the game should not silently continue from','When the pointer is const','Never — always check'],
+ c:1,why:'Silent guards on impossible states hide bugs. Assert instead. [Module 1]'},
+{q:'A Blueprint contains a Cast node in a branch that never executes. Is the target class loaded?',
+ opts:['No, casts load lazily','Only if an instance exists in the level','Yes — it is a hard reference resolved when the Blueprint loads','Only in packaged builds'],
+ c:2,why:'Load-time, not execution-time. This is why cast-heavy Blueprints balloon memory. [Module 5]'},
+{q:'Which prefix does <code>Implements&lt;T&gt;()</code> take?',
+ opts:['U','I','F','A'],
+ c:0,why:'U for the reflection query, I for Execute_ calls. "U for does it, I for do it." [Module 6]'},
+{q:'A function bound with AddDynamic silently never fires. Most likely cause?',
+ opts:['It returns a value','It is not virtual','It is not marked UFUNCTION()','It is private'],
+ c:2,why:'Dynamic delegates resolve by name through reflection; without UFUNCTION() there is nothing to find. [Modules 7, 10]'},
+{q:'Where should delegates be bound?',
+ opts:['The constructor','PostInitializeComponents() or BeginPlay()','Tick()','The class default object'],
+ c:1,why:'Constructor bindings serialize into Blueprints and survive their own removal from C++. [Module 7]'},
+{q:'Text a player will read on screen must be:',
+ opts:['FString','FName','FString converted at display time','FText'],
+ c:3,why:'FText is the only localisable type; anything else is a cleanup task deferred to your future self. [Module 9]'},
+{q:'<code>TObjectPtr&lt;T&gt;</code> belongs where?',
+ opts:['Header member properties only','Everywhere raw pointers appear','Function-local variables only','Only on asset references'],
+ c:0,why:'Header members. Locals in .cpp gain nothing. In shipping builds it behaves as a raw pointer. [Module 1]'},
+{q:'Why do many static engine functions require a WorldContextObject?',
+ opts:['For thread safety','Static functions have no instance, so no world — and Unreal may host several','To enable replication','To support Blueprint'],
+ c:1,why:'PIE sessions, editor previews and asset editors each have their own UWorld. [Module 2]'},
+{q:'You destroyed an actor and still hold a UPROPERTY pointer. Which check is correct?',
+ opts:['if (MyActor)','if (MyActor != nullptr)','if (IsValid(MyActor))','if (MyActor-&gt;IsActive())'],
+ c:2,why:'Nulling happens at collection, not destruction. IsValid covers the gap. [Module 12]'},
+{q:'The asterisk in <code>UE_LOG(LogTemp, Log, TEXT("%s"), *GetName())</code> is:',
+ opts:['A pointer dereference','A multiplication','A format specifier','An FString operator overload returning the raw character array'],
+ c:3,why:'Not pointer syntax at all — an overloaded operator. [Module 10]'},
+{q:'You need a class-reference a designer can assign so your code can spawn it. Which type?',
+ opts:['TSubclassOf&lt;AProjectileActor&gt;','AProjectileActor*','TWeakObjectPtr&lt;AProjectileActor&gt;','UClass* with no template'],
+ c:0,why:'TSubclassOf holds a class, and the template argument filters the editor dropdown to valid subclasses. [Module 9]'},
+{q:'ensure() versus check():',
+ opts:['ensure is fatal, check is not','check is fatal; ensure reports once per session and continues','Both survive into shipping builds','Both are fatal'],
+ c:1,why:'And both are compiled out of shipping. [Module 13]'},
+{q:'Your AI class will not compile with an unknown-type error on UBehaviorTree. First thing to check?',
+ opts:['Whether GENERATED_BODY is present','Whether the class is marked UCLASS','Whether AIModule is in PublicDependencyModuleNames in the .build.cs','Whether you forward declared it'],
+ c:2,why:'Missing module dependency — the classic early stumble, with an error message that rarely says so. [Module 11]'},
+{q:'A cached reference to "the last actor that damaged me" should be:',
+ opts:['A TWeakObjectPtr','A hard UPROPERTY pointer','A raw pointer with no macro','A TSubclassOf'],
+ c:0,why:'A cache is not ownership. A hard reference would keep a dead actor resident indefinitely. [Module 12]'}
+]
+}
+];
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const done = new Set();
+let cur = 0;
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* Single-pass tokenizer. Chained .replace() calls would re-scan the <span>
+   markup emitted by earlier passes and mangle it, so every token class is
+   matched in one alternation and emitted via a replacer function. */
+const TOKENS = new RegExp([
+  '(\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*)',                       // 1 comment
+  '("[^"\\n]*")',                                                 // 2 string
+  '\\b(UPROPERTY|UFUNCTION|UCLASS|USTRUCT|UENUM|UINTERFACE|' +
+    'GENERATED_BODY|UE_LOG|DECLARE_DYNAMIC_MULTICAST_DELEGATE' +
+    '(?:_\\w+)?|DECLARE_DELEGATE(?:_\\w+)?|TEXT|check|ensure' +
+    '(?:Always)?)\\b',                                            // 3 macro
+  '\\b(class|struct|enum|void|float|double|bool|const|public|private|' +
+    'protected|if|else|for|while|return|new|static|virtual|override|' +
+    'template|namespace|true|false|nullptr|this|int32|uint8|int16|' +
+    'uint16|string)\\b',                                          // 4 keyword
+  '\\b([UAFTIEG][A-Z]\\w*)\\b'                                    // 5 UE type
+].join('|'), 'g');
+
+function hi(code){
+  return esc(code).replace(TOKENS, (m, cm, st, mc, kw, ty) => {
+    const cls = cm ? 'cm' : st ? 'st' : mc ? 'mc' : kw ? 'kw' : ty ? 'ty' : null;
+    return cls ? '<span class="' + cls + '">' + m + '</span>' : m;
+  });
+}
+
+function buildNav(){
+  const nav = document.getElementById('nav');
+  let html = '', lastGrp = '';
+  COURSE.forEach((m,i)=>{
+    if(m.grp !== lastGrp){ html += '<div class="grp">'+m.grp+'</div>'; lastGrp = m.grp; }
+    html += '<button data-i="'+i+'"><span class="n">'+String(i).padStart(2,'0')+'</span>'+m.title+'<span class="dot">&#10003;</span></button>';
+  });
+  nav.innerHTML = html;
+  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.i));
+}
+
+function refreshNav(){
+  document.querySelectorAll('#nav button').forEach(b=>{
+    const i = +b.dataset.i;
+    b.classList.toggle('on', i===cur);
+    b.classList.toggle('done', done.has(i));
+  });
+  const pct = Math.round(done.size/COURSE.length*100);
+  document.querySelector('#prog>i').style.width = pct+'%';
+  document.getElementById('progtxt').textContent =
+    done.size+' of '+COURSE.length+' modules complete'+(done.size===COURSE.length?'  — course finished':'');
+}
+
+function renderBlocks(bl){
+  return bl.map(b=>{
+    switch(b.t){
+      case 'h': return '<h3>'+b.x+'</h3>';
+      case 'p': return '<p>'+b.x+'</p>';
+      case 'code': return '<pre><code>'+hi(b.x)+'</code></pre>';
+      case 'aside': return '<div class="aside"><div class="lab">'+(b.lab||'Why it works')+'</div>'+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'warn': return '<div class="warn"><div class="lab">'+(b.lab||'Careful')+'</div>'+(b.x.trim().startsWith('<p')?b.x:'<p>'+b.x+'</p>')+'</div>';
+      case 'list': return '<ul>'+b.x.map(li=>'<li>'+li+'</li>').join('')+'</ul>';
+      case 'table': return '<table><thead><tr>'+b.head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+        b.rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+      case 'chk': return '<div class="chk"><div class="lab">Check yourself</div><p class="q">'+b.q+'</p>'+
+        '<button onclick="this.parentNode.classList.add(\'open\')">Reveal answer</button>'+
+        '<div class="ans">'+b.a+'</div></div>';
+    }
+    return '';
+  }).join('');
+}
+
+function renderQuiz(m, idx){
+  const isExam = idx === COURSE.length-1;
+  let h = '<div class="quiz"><h4>'+(isExam?'Final Examination':'Module '+idx+' Quiz')+'</h4>'+
+    '<p class="hint">'+m.quiz.length+' questions. Pick one answer per question; reasoning appears immediately.</p>';
+  m.quiz.forEach((q,qi)=>{
+    h += '<div class="qi" data-q="'+qi+'"><p class="qt"><span class="num">Q'+(qi+1)+'</span>'+q.q+'</p>';
+    q.opts.forEach((o,oi)=>{
+      h += '<button class="opt" data-q="'+qi+'" data-o="'+oi+'">'+o+'</button>';
+    });
+    h += '<div class="why" data-why="'+qi+'"></div></div>';
+  });
+  h += '<div class="score" id="score"></div></div>';
+  return h;
+}
+
+function go(i){
+  cur = i;
+  const m = COURSE[i];
+  const isExam = i === COURSE.length-1;
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="kicker">'+(isExam?'Assessment':'Module '+i)+' &middot; '+m.grp+'</div>'+
+    '<h2 class="title">'+m.title+'</h2>'+
+    '<p class="lede">'+m.lede+'</p>'+
+    renderBlocks(m.blocks)+
+    renderQuiz(m,i)+
+    '<div class="pager">'+
+      '<button id="prev" '+(i===0?'disabled':'')+'>&larr; Previous</button>'+
+      '<button id="next" class="primary" '+(i===COURSE.length-1?'disabled':'')+'>Next module &rarr;</button>'+
+    '</div>';
+  window.scrollTo(0,0);
+
+  const answered = {}; let correct = 0;
+  main.querySelectorAll('.opt').forEach(btn=>{
+    btn.onclick = ()=>{
+      const qi = +btn.dataset.q, oi = +btn.dataset.o;
+      if(answered[qi]!==undefined) return;
+      answered[qi] = oi;
+      const q = m.quiz[qi];
+      main.querySelectorAll('.opt[data-q="'+qi+'"]').forEach(b=>{
+        b.disabled = true;
+        if(+b.dataset.o === q.c) b.classList.add('right');
+        else if(+b.dataset.o === oi) b.classList.add('wrong');
+      });
+      if(oi === q.c) correct++;
+      const why = main.querySelector('.why[data-why="'+qi+'"]');
+      why.innerHTML = (oi===q.c?'<b>Correct.</b> ':'<b>Not quite.</b> ')+q.why;
+      why.classList.add('show');
+
+      if(Object.keys(answered).length === m.quiz.length){
+        const sc = document.getElementById('score');
+        const pct = Math.round(correct/m.quiz.length*100);
+        let verdict;
+        if(isExam) verdict = correct>=12 ? ' — pass. You have the vocabulary to read engine source and Looman\'s Action Roguelike project without getting lost.'
+                                         : ' — below the pass mark of 12. Revisit the modules named in the explanations above, then retake.';
+        else verdict = pct===100 ? ' — clean sweep.' : pct>=60 ? ' — solid. Reread the explanations you missed before moving on.' : ' — worth rereading this module before continuing.';
+        sc.innerHTML = '<b>Score: '+correct+' / '+m.quiz.length+' ('+pct+'%)</b>'+verdict;
+        sc.classList.add('show');
+        done.add(i); refreshNav();
+      }
+    };
+  });
+
+  const p = document.getElementById('prev'), n = document.getElementById('next');
+  if(p) p.onclick = ()=>go(i-1);
+  if(n) n.onclick = ()=>go(i+1);
+  refreshNav();
+}
+
+buildNav(); go(0);
+</script>
+</body>
+</html>

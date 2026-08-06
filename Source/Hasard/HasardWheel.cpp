@@ -4,6 +4,8 @@
 #include "HasardWheel.h"
 #include "Components/StaticMeshComponent.h"
 
+
+DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 // Sets default values
 AHasardWheel::AHasardWheel()
 {
@@ -18,12 +20,22 @@ AHasardWheel::AHasardWheel()
 
 	BallMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BallMesh"));
 	BallMesh->SetupAttachment(WheelRoot);
+
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor - %s (CDO: %s)"), 
+		*GetName(), HasAnyFlags(RF_ClassDefaultObject) ? TEXT("yes") : TEXT("no"));
+}
+
+void AHasardWheel::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: PostInitializeComponents"));
 }
 
 // Called when the game starts or when spawned
 void AHasardWheel::BeginPlay()
 {
 	Super::BeginPlay();
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: BeginPlay"));
 	
 }
 
@@ -34,3 +46,8 @@ void AHasardWheel::Tick(float DeltaTime)
 
 }
 
+void AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: EndPlay"));
+	Super::EndPlay(EndPlayReason);
+}
