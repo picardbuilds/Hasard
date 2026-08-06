@@ -4,12 +4,48 @@ Engineering brief for this repo. Read before touching code.
 
 ## What this is
 
-A C++ Unreal Engine 5 portfolio piece. Personal project, built to be shown and
-read by other people.
+Hasard is a roulette prototype whose point is to demonstrate responsible gaming
+design. That is the deliverable. The wheel, the ball, and the pocket are the
+vehicle for it.
+
+It is **not** a gambling simulator that happens to have limits bolted on. The
+responsible-gaming mechanics are the reason this project exists - they are the
+subject, not a feature on the list. Read the Governing principle below before
+anything else in this file.
+
+Built flat-screen first, with VR layered on afterwards. Built in C++ on Unreal
+Engine 5, to be shown and read by other people. It is a personal portfolio piece
+aimed at Loto-Québec - a regulated operator with a social mandate, which is
+precisely why the stance below is the point of the piece rather than a
+nice-to-have attached to it.
 
 This is **not** a picardbuilds product. It shares no code, no infrastructure, and
 no conventions with any picardbuilds repo beyond this document's shape. Do not
 wire it into picardbuilds tooling, accounts, or hosting.
+
+## Governing principle
+
+Every design and engineering decision in this repo is checked against one
+question:
+
+> **Does this respect the player, or exploit them?**
+
+When the two conflict, respecting the player wins - even at the cost of the thing
+feeling less exciting. That is not a reluctant compromise, it is the exercise. A
+roulette table that felt thrilling would demonstrate nothing; the industry has
+solved that problem thoroughly and exploitatively. Giving up the cheap thrill in
+order to keep the player informed and free to leave is the hard version, and
+**that tradeoff is the portfolio piece.**
+
+So "it feels flat without it" is not an argument for adding something the rules
+below prohibit. If a mechanic is only compelling because it pressures the player,
+its absence is the demonstration working.
+
+**Any session working on this repo - human or agent - must read this section,
+along with the responsible-gaming rules under Architecture principles and
+Anti-patterns, before adding gameplay features.** If a feature request conflicts
+with them, raise the conflict and get an explicit decision. Do not silently
+implement it, and do not quietly soften it until it fits.
 
 ## Repo layout
 
@@ -37,6 +73,22 @@ version. That is expected for a launcher-registered project - pick the installed
 UE5 and let it re-associate.
 
 ## Architecture principles
+
+### Responsible gaming - build these in
+
+Load-bearing requirements, not polish. They do not get deferred until after the
+mechanic works, because they are what the mechanic is for.
+
+- **True odds and the house edge are always visible and honest.** A player can see
+  what the game takes, stated plainly, without hunting for it.
+- **Running spend is visible in the play space**, not buried in a menu. If the
+  player has to go looking for what they have spent, it is hidden.
+- **A session timer with an in-world reality check** - present in the scene the
+  player is actually in, not a notification that can be dismissed unread.
+- **Leaving is always one clear action away.** No confirmation gauntlet, no
+  parting offer, no flow that makes stopping more effort than continuing.
+
+### Engineering
 
 - Gameplay logic lives in C++ under `Source/Hasard/`. Blueprints are for wiring
   and designer-facing tweaks, not for logic that belongs in a class.
@@ -77,6 +129,27 @@ suddenly large, the ignore rules were bypassed - do not push it, fix it.
 
 ## Anti-patterns - do not do this
 
+### Responsible gaming - never implement
+
+Not tunable, not negotiable. Do not implement these, and do not implement a
+softened version "just to see how it feels":
+
+- **Near-miss animations**, or any feedback that makes a loss feel close. The ball
+  landing one pocket over is a loss and must read as a loss.
+- **Losses disguised as wins.** No celebratory audio or visuals on a spin that
+  nets a loss.
+- **Hidden or hard-to-find spend totals.** If it takes a menu dive, it is hidden.
+- **Obscured, omitted, or misstated odds.**
+- **Dark patterns that extend a session** - fake urgency, "one more spin" nudges,
+  interrupted or delayed exit flows.
+- **Anything that misrepresents the house edge**, including by omission, or by
+  framing that makes it look smaller than it is.
+
+Every one of these is routine in commercial gambling products. That is exactly why
+refusing them is the thing worth showing.
+
+### Repo hygiene
+
 - Do not commit `.sln`/`.slnx`. Visual Studio regenerates them, and `*.sln` does
   not match `*.slnx` - both patterns are in `.gitignore` for that reason.
 - Do not add an asset extension to `.gitattributes` in the same commit as files
@@ -109,3 +182,32 @@ tracking rules are already live and waiting.
 ### 2026-07-31 - Builds and demo video live on Google Drive
 Kept out of Git entirely rather than managed through LFS. Packaged Unreal builds
 are multi-gigabyte and regenerable; paying LFS bandwidth for them is waste.
+
+### 2026-08-06 - Renamed First -> Hasard
+`First` was a placeholder. `hasard` is the French word for chance, and *jeux de
+hasard* is the regulatory term for games of chance - the name states what the
+project is in the language of the intended audience. Done while `Content/` was
+still empty, which is the cheap moment: the name is carried by `Hasard.uproject`,
+the `Source/Hasard/` module folder, `Hasard.Build.cs`, the module header/cpp, and
+the `HASARD_API` macro. Renaming once assets reference `/Script/Hasard` is
+materially harder.
+
+### 2026-08-06 - Project scope defined
+Roulette prototype, flat-screen first with VR layered on afterwards,
+responsible-gaming mechanics as the differentiator, aimed at Loto-Québec. The full
+entry - core mechanic, the VR-agnostic split, the responsible-gaming list, scope
+discipline - is in `docs/leftover.md` under Settled decisions. Not duplicated here.
+
+### 2026-08-06 - Responsible gaming is the governing principle
+Responsible gaming is the project's organizing principle, not a feature. The
+roulette table is the vehicle for demonstrating it. The target is Loto-Québec, a
+regulated operator with a social mandate: a merely well-built roulette prototype
+demonstrates nothing they cannot already buy, so refusing the exploitative
+patterns that are standard in commercial gambling products is the differentiator.
+The accepted cost is that the result will be less exciting than an exploitative
+equivalent - deliberate, and the point rather than a shortfall to fix later.
+
+Consequence for an already-open decision: the spin result - predetermined, or
+emergent from real ball physics (open decision 3 in `docs/leftover.md`) - is now
+partly a responsible-gaming question rather than a purely technical one, because
+an honest-odds display is a claim about the distribution.
