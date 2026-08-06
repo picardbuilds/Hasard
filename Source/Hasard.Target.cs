@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class FirstEditorTarget : TargetRules
+public class HasardTarget : TargetRules
 {
-	public FirstEditorTarget( TargetInfo Target) : base(Target)
+	public HasardTarget(TargetInfo Target) : base(Target)
 	{
-		Type = TargetType.Editor;
+		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
-		ExtraModuleNames.Add("First");
+		ExtraModuleNames.Add("Hasard");
 	}
 }

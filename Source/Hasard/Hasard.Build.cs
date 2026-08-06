@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class First : ModuleRules
+public class Hasard : ModuleRules
 {
-	public First(ReadOnlyTargetRules Target) : base(Target)
+	public Hasard(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	

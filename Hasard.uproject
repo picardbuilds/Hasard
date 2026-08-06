@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "First",
+			"Name": "Hasard",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
