@@ -8,6 +8,9 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
 
 UCLASS()
 class HASARD_API AHasardPlayerPawn : public APawn
@@ -31,6 +34,22 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
 	TObjectPtr<UCameraComponent> TableCamera;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputMappingContext> TableMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputAction> PlaceBetAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputAction> SpinAction;
+
+	void Look(const FInputActionValue& Value);
+	void PlaceBet();
+	void RequestSpin();
 
 public:	
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;

@@ -21,8 +21,8 @@ AHasardWheel::AHasardWheel()
 	BallMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BallMesh"));
 	BallMesh->SetupAttachment(WheelRoot);
 
-	UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor - %s (CDO: %s)"), 
-		*GetName(), HasAnyFlags(RF_ClassDefaultObject) ? TEXT("yes") : TEXT("no"));
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor - %s"), 
+		*GetName());
 }
 
 void AHasardWheel::PostInitializeComponents()
