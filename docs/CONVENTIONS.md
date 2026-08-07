@@ -110,7 +110,10 @@ Rules:
 
 - Touched a header? Full build with the **editor closed**. Live Coding won't do it.
 - A class compiled while the editor is open is invisible to it — no error is reported anywhere.
-- IntelliSense squiggles on `GENERATED_BODY()`, `Super::`, `_Implementation`, `.generated.h` are noise. Plain C++ errors (`E0333`, type mismatch, undeclared function) are real.
+- `E####` errors come from IntelliSense; `C####` errors in the Output window come from MSVC. Only the second kind stops a build.
+- IntelliSense squiggles naming `GENERATED_BODY()`, `Super::`, `_Implementation` or `.generated.h` are noise — it cannot run UHT, so it reads a stale generated header. `E0135: AActor has no member SetupPlayerInputComponent` is this: `Super` has not resolved to `APawn` yet.
+- Plain C++ errors are real even from IntelliSense — `E0333` (defining an undeclared member), type mismatches, missing declarations. The prefix tells you who is speaking, not whether they are right; the tiebreaker is whether the symbol is macro-generated.
+- Squiggles persisting after a clean build: right-click `Hasard.uproject` → Generate Visual Studio project files, then reopen the solution.
 - A GameMode never set in Project Settings → Maps & Modes is a silent no-op that looks exactly like broken code.
 
 ---
