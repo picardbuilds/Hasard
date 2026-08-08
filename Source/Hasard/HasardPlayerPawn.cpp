@@ -8,9 +8,10 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "HasardBettingComponent.h"
-#include "HasardTypes.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
+#include "HasardInteractionComponent.h"
+#include "HasardInteractable.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
@@ -30,6 +31,8 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 	TableCamera->bUsePawnControlRotation = false;
 
 	BettingComp = CreateDefaultSubobject<UHasardBettingComponent>(TEXT("BettingComp"));
+
+	InteractionComp = CreateDefaultSubobject<UHasardInteractionComponent>(TEXT("InteractionComp"));
 }
 
 void AHasardPlayerPawn::OnConstruction(const FTransform& Transform) 
@@ -40,11 +43,6 @@ void AHasardPlayerPawn::OnConstruction(const FTransform& Transform)
 	{
 		CameraBoom->TargetArmLength = CameraDistance;
 	}
-}
-
-void AHasardPlayerPawn::BeginPlay()
-{
-	Super::BeginPlay();
 }
 
 void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -65,11 +63,10 @@ void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EIC->BindAction(LookAction,		ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
+		EIC->BindAction(LookAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
 		EIC->BindAction(PlaceBetAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
-		EIC->BindAction(SpinAction,		ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
+		EIC->BindAction(SpinAction,     ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
 	}
-
 	else
 	{
 		UE_LOG(LogHasard, Warning, TEXT("Not on EnhancedInputComponent"));
@@ -85,11 +82,15 @@ void AHasardPlayerPawn::Look(const FInputActionValue& Value)
 
 void AHasardPlayerPawn::PlaceBet()
 {
-	UE_LOG(LogHasard, Warning, TEXT("PlaceBet pressed"));
-
-	if (BettingComp)
+	if (!InteractionComp)
 	{
-		BettingComp->PlaceBet(EHasardBetType::StraightUp, 17, 5);
+		return;
+	}
+
+	AActor* Hit = InteractionComp->TraceForInteractable();
+	if (Hit && Hit->Implements<UHasardInteractable>())
+	{
+		IHasardInteractable::Execute_OnPlayerInteract(Hit, this);
 	}
 }
 

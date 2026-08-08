@@ -11,6 +11,7 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class UHasardBettingComponent;
+class UHasardInteractionComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -24,7 +25,6 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 protected:
-	virtual void BeginPlay() override;
 
 	/** Distance from the table. Applied in OnConstruction, so edits apply right away. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Camera")
@@ -53,6 +53,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")
 	TObjectPtr<UHasardBettingComponent> BettingComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Interaction")
+	TObjectPtr<UHasardInteractionComponent> InteractionComp;
 
 	void Look(const FInputActionValue& Value);
 	void PlaceBet();

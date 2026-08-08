@@ -105,11 +105,16 @@ open them in a browser.
 each one ends with a commit message. If you are picking up work on this repo,
 read the module after the last one in the commit history and continue from there.
 
-Progress as of 2026-08-07: **Modules 0-6 complete** - wheel actor with component
+Progress as of 2026-08-08: **Modules 0-7 complete** - wheel actor with component
 hierarchy, exposed tuning properties, GameMode/PlayerController/PlayerState with
 round phases, actor lifecycle logging, a wall-clock session timer with reality
-check, the table camera pawn, and Enhanced Input (look, place bet, spin).
-Module 7 (components, `HasardTypes.h`, the betting component) is next.
+check, the table camera pawn, Enhanced Input (look, place bet, spin), and the
+betting component with `HasardTypes.h` holding the shared enum and struct.
+Module 8 (collision, tracing, the clickable felt) is next.
+
+`CameraDistance` is applied in `AHasardPlayerPawn::OnConstruction`, not the
+constructor: Blueprint writes its property overrides after the C++ constructor
+runs, so a constructor-set arm length ignores the Blueprint value entirely.
 
 Both guides carry corrections found while building. Guide 1's input module is
 explicitly flagged as legacy - use Enhanced Input, per Guide 2 Module 6.
@@ -187,6 +192,26 @@ went in as a normal blob and needs to be rewritten out.
 The working tree ran about 4.9 GB on 2026-07-31 while the tracked content was
 under 40 KB. Effectively all of that mass is regenerable. If a commit is
 suddenly large, the ignore rules were bypassed - do not push it, fix it.
+
+## Commit messages
+
+**Subject line: 50 characters, hard limit.** Imperative mood, capitalised, no
+trailing period. `Add betting component and shared types`, not
+`Added the betting component and the shared Hasard types.`
+
+Anything that needs explaining goes in the body, never the subject. Use a second
+`-m`, wrapped at 72 columns, and write *why* rather than *what* - the diff
+already says what changed.
+
+```
+git commit -m "Move camera distance to OnConstruction" -m "Set in the
+constructor, the Blueprint override never reached it: Blueprint writes its
+property defaults after the C++ constructor has run."
+```
+
+Guide 2's Build steps each end with a suggested commit. Those subjects are
+written to fit this limit; if one does not, shorten it rather than copying it
+verbatim, and fix the guide in the same commit.
 
 ## Anti-patterns - do not do this
 
