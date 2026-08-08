@@ -2,7 +2,9 @@
 
 Project: `C:\UE5\Hasard` · Module prefix `HASARD_API` · Repo `joehockey04/Hasard` (private, Git LFS)
 
-Rules derived from the code already written (Modules 1–3). Follow these instead of re-deciding each time.
+Rules derived from the code already written (Modules 1–6). Follow these instead of re-deciding each time.
+
+**Spawn the Blueprint, never the C++ class.** Any class picker — Default Pawn Class, Default GameMode, Player Controller Class — shows both `HasardPlayerPawn` and `BP_PlayerPawn`. The C++ class is the declaration; the Blueprint holds the assigned assets. Pick the C++ one and every `EditDefaultsOnly` property is `None` at runtime, so the feature does nothing and reports nothing.
 
 ---
 
@@ -81,7 +83,37 @@ elapsed values on the way out, never for the absolute stamp.
 
 ---
 
-## 5. Logging
+## 5. Comments
+
+Three triggers. Everything else is noise.
+
+1. **A reader would reasonably write it differently.** The comment defends the choice.
+2. **The line is a responsible-gaming decision**, not a mechanical one. It marks what must not be quietly "simplified" later.
+3. **It sits above a reflected member.** `/** */` on a `UPROPERTY` becomes the **tooltip in the editor** — that one isn't written for programmers at all.
+
+```cpp
+/** How often the reality check interrupts. 15s for observation; 300s once the UI exists. */
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Session")
+float RealityCheckIntervalSeconds = 15.0f;
+
+/**
+ * Wall clock at session start, from FPlatformTime::Seconds().
+ * Deliberately not GetTimeSeconds(): world time stops on pause and scales with
+ * dilation, either of which understates how long the player has been here.
+ * double, not float - the engine offsets this value past 2^24.
+ */
+double SessionStartRealTime = 0.0;
+```
+
+**Delete every wizard comment on sight** — `// Called every frame`, `// Sets default values for this actor's properties`, `// Called to bind functionality to input`. A comment that restates the line beneath it trains you to stop reading comments, which is expensive on the day one of them is load-bearing.
+
+The `.cpp` needs far less than the header, because the header carries the reasoning. Worth a line there: a non-obvious include, or an ordering that looks wrong (`ClearTimer` before `Super::EndPlay`).
+
+**Deleting a responsible-gaming comment removes the only warning that the line below it is not free to change.** `SessionStartRealTime` looks exactly like something a tidy-minded reader would "fix" to `float` and `GetTimeSeconds()` in five minutes.
+
+---
+
+## 6. Logging
 
 One shared category in `HasardTypes.h` (`DECLARE_LOG_CATEGORY_EXTERN`), not `DEFINE_LOG_CATEGORY_STATIC` per file — per-file statics create separate categories that merely share a name.
 
@@ -96,7 +128,7 @@ UE_LOG(LogHasard, Warning, TEXT("GameMode BeginPlay - phase: %s"),
 
 ---
 
-## 6. Build workflow
+## 7. Build workflow
 
 Do all of a module in one pass. Each editor↔VS transition costs a close-build-reopen cycle.
 
@@ -118,7 +150,7 @@ Rules:
 
 ---
 
-## 7. Commits
+## 8. Commits
 
 **One commit per module**, made after the module works end to end — build, Blueprint, Project Settings, Play.
 
@@ -163,7 +195,7 @@ git commit -m "Add L_RouletteTest level"
 
 ---
 
-## 8. Repo layout
+## 9. Repo layout
 
 ```
 C:\UE5\Hasard\          repo root == project root (outside cloud-synced folders)

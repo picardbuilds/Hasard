@@ -1,18 +1,19 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright Picardbuilds. All Rights Reserved.
 
 #include "HasardPlayerPawn.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "InputActionValue.h"
-#include "InputMappingContext.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/LocalPlayer.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "HasardBettingComponent.h"
+#include "HasardTypes.h"
+#include "InputActionValue.h"
+#include "InputMappingContext.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
-// Sets default values
 AHasardPlayerPawn::AHasardPlayerPawn()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -21,7 +22,6 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 	RootComponent = ViewRoot;
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(ViewRoot);
-	CameraBoom->TargetArmLength = CameraDistance;
 	CameraBoom->bUsePawnControlRotation = true;
 	CameraBoom->bDoCollisionTest = false;
 
@@ -29,16 +29,24 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 	TableCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TableCamera->bUsePawnControlRotation = false;
 
+	BettingComp = CreateDefaultSubobject<UHasardBettingComponent>(TEXT("BettingComp"));
 }
 
-// Called when the game starts or when spawned
+void AHasardPlayerPawn::OnConstruction(const FTransform& Transform) 
+{
+	Super::OnConstruction(Transform);
+
+	if (CameraBoom)
+	{
+		CameraBoom->TargetArmLength = CameraDistance;
+	}
+}
+
 void AHasardPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
-// Called to bind functionality to input
 void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -60,14 +68,12 @@ void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EIC->BindAction(LookAction,		ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
 		EIC->BindAction(PlaceBetAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
 		EIC->BindAction(SpinAction,		ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
-
 	}
 
 	else
 	{
 		UE_LOG(LogHasard, Warning, TEXT("Not on EnhancedInputComponent"));
 	}
-
 }
 
 void AHasardPlayerPawn::Look(const FInputActionValue& Value)
@@ -75,12 +81,16 @@ void AHasardPlayerPawn::Look(const FInputActionValue& Value)
 	const FVector2D Input = Value.Get<FVector2D>();
 	AddControllerYawInput(Input.X);
 	AddControllerPitchInput(Input.Y);
-
 }
 
 void AHasardPlayerPawn::PlaceBet()
 {
 	UE_LOG(LogHasard, Warning, TEXT("PlaceBet pressed"));
+
+	if (BettingComp)
+	{
+		BettingComp->PlaceBet(EHasardBetType::StraightUp, 17, 5);
+	}
 }
 
 void AHasardPlayerPawn::RequestSpin()

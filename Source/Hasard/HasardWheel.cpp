@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright Picardbuilds. All Rights Reserved.
 
 #include "HasardWheel.h"
 #include "Components/StaticMeshComponent.h"
@@ -31,19 +30,15 @@ void AHasardWheel::PostInitializeComponents()
 	UE_LOG(LogHasard, Warning, TEXT("Wheel: PostInitializeComponents"));
 }
 
-// Called when the game starts or when spawned
 void AHasardWheel::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(LogHasard, Warning, TEXT("Wheel: BeginPlay"));
-	
 }
 
-// Called every frame
 void AHasardWheel::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)

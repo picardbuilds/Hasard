@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright Picardbuilds. All Rights Reserved.
 
 #pragma once
 
@@ -10,6 +10,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UHasardBettingComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -20,9 +21,12 @@ class HASARD_API AHasardPlayerPawn : public APawn
 public:
 	AHasardPlayerPawn();
 
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 protected:
 	virtual void BeginPlay() override;
 
+	/** Distance from the table. Applied in OnConstruction, so edits apply right away. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Camera")
 	float CameraDistance = 250.0f;
 
@@ -47,11 +51,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputAction> SpinAction;
 
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")
+	TObjectPtr<UHasardBettingComponent> BettingComp;
+
 	void Look(const FInputActionValue& Value);
 	void PlaceBet();
 	void RequestSpin();
-
-public:	
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
 };

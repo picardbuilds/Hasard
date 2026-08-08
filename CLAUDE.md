@@ -60,7 +60,36 @@ launcher can open directly.
 | `Source/*.Target.cs` | Build targets (game, editor) |
 | `Config/` | `DefaultEngine.ini`, `DefaultGame.ini`, `DefaultInput.ini`, `DefaultEditor.ini` |
 | `Content/` | Assets. Empty as of 2026-07-31 - see decision log |
-| `docs/` | Handoff note and the two learning guides - see Learning guides below |
+| `docs/` | Handoff note, `CONVENTIONS.md`, `epic-standard-audit.md`, and the two learning guides - see below |
+
+## Skills - load these at the start of every session
+
+Two skills exist for this repo specifically. **Any new session working here loads both
+up front, without being asked and without asking first.** They are not on-demand tools
+to reach for once a problem appears.
+
+| Skill | What it carries |
+|---|---|
+| `ue5-code-review` | Epic's official C++ coding standard and engine-usage conventions, targeted at UE 5.8. Naming, formatting, const, encapsulation, `UPROPERTY`/`UFUNCTION`, GC and lifetimes, actor lifecycle, gameplay-framework ownership, Enhanced Input, and what dates a UE4-era tutorial. |
+| `ue5-guide-authoring` | The `guide-N-*.html` course format and its rules: a complete file at every Build step, every editor action spelled out, each module ending in something observable, quiz answers distributed across all four positions. |
+
+**Why up front rather than on request.** Both skills are preventive. `ue5-code-review`
+is meant to be read *before* C++ is written here, so it complies on the first pass -
+loading it when a review is finally requested means the violations already exist and the
+session is correcting itself. `ue5-guide-authoring` is the same for guide work: the
+full-file rule and the editor-step checklist shape a module as it is written; applied
+afterwards they are a rewrite. A session that waits to be asked has already spent the
+value.
+
+So: read both at session start. Do not ask whether to load them, do not wait for a
+prompt containing the word "review", and do not treat "the user did not mention the
+guides" as a reason to skip the second one - a code change frequently means a guide
+module needs correcting in the same commit.
+
+The audit in `docs/epic-standard-audit.md` (2026-08-08) is the current gap list between
+this repo and Epic's standard, including the places where `docs/CONVENTIONS.md` itself
+contradicts Epic. Read it alongside `CONVENTIONS.md`; where the two disagree, the audit
+is the newer judgement and Epic is the authority behind it.
 
 ## Learning guides
 
@@ -76,9 +105,11 @@ open them in a browser.
 each one ends with a commit message. If you are picking up work on this repo,
 read the module after the last one in the commit history and continue from there.
 
-Progress as of 2026-08-06: **Modules 0-3 complete** - wheel actor with component
+Progress as of 2026-08-07: **Modules 0-6 complete** - wheel actor with component
 hierarchy, exposed tuning properties, GameMode/PlayerController/PlayerState with
-round phases. Module 4 (actor lifecycle, session timer) is next.
+round phases, actor lifecycle logging, a wall-clock session timer with reality
+check, the table camera pawn, and Enhanced Input (look, place bet, spin).
+Module 7 (components, `HasardTypes.h`, the betting component) is next.
 
 Both guides carry corrections found while building. Guide 1's input module is
 explicitly flagged as legacy - use Enhanced Input, per Guide 2 Module 6.
@@ -193,6 +224,13 @@ refusing them is the thing worth showing.
   scaffolders write their own `CLAUDE.md`. Commit before running any of them and
   keep this hand-written brief authoritative.
 
+### Sessions
+
+- Do not start writing C++ here before loading `ue5-code-review`, and do not start
+  editing a guide before loading `ue5-guide-authoring`. See Skills above.
+- Do not ask permission to load them. Asking each time is the failure this rule
+  exists to remove.
+
 ## Decision log
 
 ### 2026-07-31 - Repo initialized with LFS from the first commit
@@ -283,3 +321,29 @@ The distinction is narrow and worth stating: gameplay durations *should* use
 world time. The six-second spin is part of the simulation and should slow down
 when the simulation does. Only the figures reported *to* the player about their
 own behaviour are held to wall clock.
+
+### 2026-08-08 - Two repo skills, loaded at session start rather than on request
+`ue5-code-review` carries Epic's official coding standard and engine-usage conventions
+for UE 5.8; `ue5-guide-authoring` carries the guide format and its completeness rules.
+Both are loaded at the start of any session on this repo, without being asked.
+
+The alternative - surfacing them when a request happens to mention "review" or "guide" -
+was rejected because both skills are preventive. Code written before the standard is
+loaded has to be corrected afterwards, and a guide module written before the full-file
+rule is loaded has to be rewritten. The cost of loading them unnecessarily is a few
+thousand tokens; the cost of loading them late is the work already being wrong.
+
+Written down here rather than left to habit because a fresh session has no memory of the
+previous one, and the previous one is where the reason lives.
+
+### 2026-08-08 - Epic's standard is the authority over `docs/CONVENTIONS.md`
+`docs/epic-standard-audit.md` records where this repo and its own conventions diverge
+from Epic. Where `CONVENTIONS.md` is *stricter* than Epic it stands - the `Hasard` type
+prefix, the three comment triggers, one shared log category, the batch build workflow.
+Where it is *contrary* to Epic, Epic wins and the convention is the thing to fix.
+
+The live case: `CONVENTIONS.md` §3 makes members `protected` by default, specifically to
+avoid `meta=(AllowPrivateAccess="true")`. Epic requires private by default with protected
+accessors, and treats that meta tag as the intended cost. Unresolved as of this entry -
+it changes every header, so it is decided once at the convention level rather than
+per file.
