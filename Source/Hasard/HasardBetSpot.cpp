@@ -4,6 +4,7 @@
 #include "HasardBetSpot.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
+#include "HasardBettingComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
@@ -24,6 +25,19 @@ AHasardBetSpot::AHasardBetSpot()
 
 void AHasardBetSpot::OnPlayerInteract_Implementation(APawn* InstigatorPawn)
 {
-	UE_LOG(LogHasard, Warning, TEXT("BetSpot: %s on %d, from %s"),
-		*UEnum::GetValueAsString(BetType), PrimaryNumber, *GetNameSafe(InstigatorPawn));
+	if (!InstigatorPawn) 
+	{
+		return;
+	}
+
+	UHasardBettingComponent* Betting =
+		InstigatorPawn->FindComponentByClass<UHasardBettingComponent>();
+	if (!Betting)
+	{
+		UE_LOG(LogHasard, Warning, TEXT("BetSpot: %s has no betting component"),
+			*GetNameSafe(InstigatorPawn));
+		return;
+	}
+
+	Betting->PlaceBet(BetType, PrimaryNumber, Stake);
 }

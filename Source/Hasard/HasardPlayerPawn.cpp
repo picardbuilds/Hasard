@@ -2,6 +2,7 @@
 
 #include "HasardPlayerPawn.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SceneComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -12,6 +13,8 @@
 #include "InputMappingContext.h"
 #include "HasardInteractionComponent.h"
 #include "HasardInteractable.h"
+#include "HasardWheel.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
@@ -21,6 +24,7 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 
 	ViewRoot = CreateDefaultSubobject<USceneComponent>(TEXT("ViewRoot"));
 	RootComponent = ViewRoot;
+
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(ViewRoot);
 	CameraBoom->bUsePawnControlRotation = true;
@@ -32,24 +36,31 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 
 	BettingComp = CreateDefaultSubobject<UHasardBettingComponent>(TEXT("BettingComp"));
 
-	InteractionComp = CreateDefaultSubobject<UHasardInteractionComponent>(TEXT("InteractionComp"));
+	InteractionComp =
+		CreateDefaultSubobject<UHasardInteractionComponent>(TEXT("InteractionComp"));
 }
 
-void AHasardPlayerPawn::OnConstruction(const FTransform& Transform) 
+void AHasardPlayerPawn::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	// HERE, not in the constructor: Blueprint overrides land afterwards.
 	if (CameraBoom)
 	{
 		CameraBoom->TargetArmLength = CameraDistance;
 	}
 }
 
+void AHasardPlayerPawn::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
 void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	if (const APlayerController* PC = Cast<APlayerController>(Controller))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
@@ -69,7 +80,7 @@ void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	}
 	else
 	{
-		UE_LOG(LogHasard, Warning, TEXT("Not on EnhancedInputComponent"));
+		UE_LOG(LogHasard, Error, TEXT("Not on EnhancedInputComponent"));
 	}
 }
 
@@ -96,5 +107,21 @@ void AHasardPlayerPawn::PlaceBet()
 
 void AHasardPlayerPawn::RequestSpin()
 {
-	UE_LOG(LogHasard, Warning, TEXT("Spin requested"));
+	AActor* Found = UGameplayStatics::GetActorOfClass(GetWorld(), AHasardWheel::StaticClass());
+	if (AHasardWheel* Wheel = Cast<AHasardWheel>(Found))
+	{
+		Wheel->StartSpin();
+	}
+	else
+	{
+		UE_LOG(LogHasard, Warning, TEXT("Spin requested, but there is no wheel in the level"));
+	}
+}
+
+void AHasardPlayerPawn::SettleRound(int32 WinningPocket)
+{
+	if (BettingComp)
+	{
+		BettingComp->SettleRound(WinningPocket);
+	}
 }

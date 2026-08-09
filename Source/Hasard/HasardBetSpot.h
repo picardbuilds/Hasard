@@ -31,4 +31,7 @@ protected:
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Hasard|BetSpot")
 	int32 PrimaryNumber = 0;
 
+	/** Table minimum for this square. Class default of 5, overridable per placement. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hasard|BetSpot", meta = (ClampMin = "1"))
+	int32 Stake = 5;
 };

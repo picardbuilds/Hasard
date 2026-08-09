@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "HasardPlayerPawn.generated.h"
 
+class USceneComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
@@ -22,12 +23,19 @@ class HASARD_API AHasardPlayerPawn : public APawn
 public:
 	AHasardPlayerPawn();
 
+	/** Console: SettleRound 17 */
+	UFUNCTION(Exec)
+	void SettleRound(int32 WinningPocket);
+
+protected:
+	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-protected:
 
+private:
 	/** Distance from the table. Applied in OnConstruction, so edits apply right away. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Camera")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Camera",
+		meta = (AllowPrivateAccess = "true"))
 	float CameraDistance = 250.0f;
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
@@ -38,6 +46,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
 	TObjectPtr<UCameraComponent> TableCamera;
+
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")
+	TObjectPtr<UHasardBettingComponent> BettingComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Interaction")
+	TObjectPtr<UHasardInteractionComponent> InteractionComp;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputMappingContext> TableMappingContext;
@@ -50,12 +64,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputAction> SpinAction;
-
-	UPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")
-	TObjectPtr<UHasardBettingComponent> BettingComp;
-
-	UPROPERTY(VisibleAnywhere, Category = "Hasard|Interaction")
-	TObjectPtr<UHasardInteractionComponent> InteractionComp;
 
 	void Look(const FInputActionValue& Value);
 	void PlaceBet();

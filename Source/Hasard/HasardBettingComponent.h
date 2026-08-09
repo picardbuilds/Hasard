@@ -15,15 +15,24 @@ class HASARD_API UHasardBettingComponent : public UActorComponent
 public:
 	UHasardBettingComponent();
 
+	/** Records a bet. Returns false if the stake is not positive. */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Betting")
 	bool PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake);
 
+	/** Drops every active bet. Called between rounds. */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Betting")
 	void ClearAllBets();
 
-protected:
-	virtual void BeginPlay() override;
+	/** Removes every losing bet. The pawn exposes an Exec wrapper for console testing. */
+	UFUNCTION(BlueprintCallable, Category = "Hasard|Betting")
+	void SettleRound(int32 WinningPocket);
 
-	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Betting")
-	int32 ChipDenomination = 5;
+	UFUNCTION(BlueprintPure, Category = "Hasard|Betting")
+	int32 GetTotalStaked() const;
+
+protected:
+
+	/** UPROPERTY so the array serializes and Blueprint can read it. */
+	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Betting")
+	TArray<FHasardBet> ActiveBets;
 };

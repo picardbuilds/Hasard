@@ -1,11 +1,16 @@
 // Copyright Picardbuilds. All Rights Reserved.
 
-
 #include "HasardPlayerState.h"
-#include "TimerManager.h"
+#include "HasardBankrollComponent.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
+
+AHasardPlayerState::AHasardPlayerState()
+{
+	BankrollComp = CreateDefaultSubobject<UHasardBankrollComponent>(TEXT("BankrollComp"));
+}
 
 void AHasardPlayerState::BeginPlay()
 {
@@ -31,5 +36,6 @@ float AHasardPlayerState::GetSessionElapsedSeconds() const
 
 void AHasardPlayerState::RealityCheck()
 {
-	UE_LOG(LogHasard, Warning, TEXT("REALITY CHECK - %.0f seconds this session"), GetSessionElapsedSeconds());
+	UE_LOG(LogHasard, Warning, TEXT("REALITY CHECK - %.0f seconds this session"),
+		GetSessionElapsedSeconds());
 }

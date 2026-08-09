@@ -2,14 +2,15 @@
 
 #include "HasardWheel.h"
 #include "Components/StaticMeshComponent.h"
-
+#include "Components/SceneComponent.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
-// Sets default values
+
 AHasardWheel::AHasardWheel()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	WheelRoot = CreateDefaultSubobject<USceneComponent>(TEXT("WheelRoot"));
 	RootComponent = WheelRoot;
@@ -20,7 +21,7 @@ AHasardWheel::AHasardWheel()
 	BallMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BallMesh"));
 	BallMesh->SetupAttachment(WheelRoot);
 
-	UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor - %s"), 
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: Constructor - %s"),
 		*GetName());
 }
 
@@ -36,13 +37,26 @@ void AHasardWheel::BeginPlay()
 	UE_LOG(LogHasard, Warning, TEXT("Wheel: BeginPlay"));
 }
 
-void AHasardWheel::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
 void AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UE_LOG(LogHasard, Warning, TEXT("Wheel: EndPlay"));
+	GetWorldTimerManager().ClearTimer(SpinTimerHandle);
 	Super::EndPlay(EndPlayReason);
+}
+
+void AHasardWheel::StartSpin()
+{
+	GetWorldTimerManager().SetTimer(SpinTimerHandle, this,
+		&AHasardWheel::FinishSpin, SpinDuration, false);
+}
+
+void AHasardWheel::FinishSpin()
+{
+	const int32 WinningPocket = DetermineWinningPocket();
+	OnBallSettled.Broadcast(WinningPocket);
+}
+
+int32 AHasardWheel::DetermineWinningPocket() const
+{
+	return FMath::RandRange(0, PocketCount - 1);
 }
