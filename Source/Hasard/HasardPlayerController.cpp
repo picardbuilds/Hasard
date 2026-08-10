@@ -7,6 +7,8 @@
 #include "InputMappingContext.h"
 #include "TimerManager.h"
 #include "HasardBankrollComponent.h"
+#include "HasardGameMode.h"
+#include "HasardPayoutTable.h"
 #include "HasardHUDWidget.h"
 #include "HasardPlayerState.h"
 
@@ -24,6 +26,24 @@ void AHasardPlayerController::BeginPlay()
 			HUDWidget->AddToViewport();
 			HUDWidget->OnRealityCheckDismissed.AddUObject(
 				this, &AHasardPlayerController::HandleRealityCheckDismissed);
+		}
+	}
+
+	// The one figure true of every bet, published once because it never changes -
+	// and because it never changing is the entire point of showing it.
+	if (HUDWidget)
+	{
+		const AHasardGameMode* GM = GetWorld()->GetAuthGameMode<AHasardGameMode>();
+		const UHasardPayoutTable* Table = GM ? GM->GetPayoutTable() : nullptr;
+
+		float SharedEdge = 0.0f;
+		if (Table && Table->TryGetSharedHouseEdge(SharedEdge))
+		{
+			HUDWidget->SetHouseEdge(SharedEdge * 100.0f);
+		}
+		else
+		{
+			HUDWidget->SetHouseEdgeUnknown();
 		}
 	}
 

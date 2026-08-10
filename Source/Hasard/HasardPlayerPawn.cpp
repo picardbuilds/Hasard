@@ -4,6 +4,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/PlayerController.h"
@@ -11,6 +12,7 @@
 #include "HasardBettingComponent.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
+#include "HasardGameMode.h"
 #include "HasardInteractionComponent.h"
 #include "HasardInteractable.h"
 #include "HasardWheel.h"
@@ -120,8 +122,10 @@ void AHasardPlayerPawn::RequestSpin()
 
 void AHasardPlayerPawn::SettleRound(int32 WinningPocket)
 {
-	if (BettingComp)
+	// Through the GameMode now, because the GameMode owns the payout table. The
+	// console test and the wheel therefore travel the same path.
+	if (AHasardGameMode* GM = GetWorld()->GetAuthGameMode<AHasardGameMode>())
 	{
-		BettingComp->SettleRound(WinningPocket);
+		GM->ResolveRound(WinningPocket);
 	}
 }

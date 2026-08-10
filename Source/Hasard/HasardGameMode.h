@@ -7,11 +7,12 @@
 #include "HasardGameMode.generated.h"
 
 class AHasardWheel;
+class UHasardPayoutTable;
 
 UENUM(BlueprintType)
 enum class EHasardRoundPhase : uint8
 {
-	Betting UMETA(DisplayName = "Betting"),
+	Betting  UMETA(DisplayName = "Betting"),
 	Spinning UMETA(DisplayName = "Spinning"),
 	Settling UMETA(DisplayName = "Settling")
 };
@@ -24,6 +25,13 @@ class HASARD_API AHasardGameMode : public AGameModeBase
 public:
 	AHasardGameMode();
 
+	/** Settles one round against the payout table. */
+	UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
+	void ResolveRound(int32 WinningPocket);
+
+	/** The HUD reads odds through this. Const: nothing may edit the table at runtime. */
+	const UHasardPayoutTable* GetPayoutTable() const { return PayoutTable; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -33,8 +41,14 @@ private:
 	UFUNCTION()
 	void HandleBallSettled(int32 WinningPocket);
 
+	/** Cached so EndPlay unbinds from the same wheel BeginPlay bound to. */
 	UPROPERTY()
 	TObjectPtr<AHasardWheel> BoundWheel;
+
+	/** Assigned on BP_HasardGameMode. Payouts never come from a literal. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Round",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHasardPayoutTable> PayoutTable;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Round",
 		meta = (AllowPrivateAccess = "true"))

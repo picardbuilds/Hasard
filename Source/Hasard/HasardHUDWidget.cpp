@@ -25,6 +25,25 @@ void UHasardHUDWidget::SetSessionTime(float ElapsedSeconds)
 		FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds)));
 }
 
+void UHasardHUDWidget::SetHouseEdge(float EdgePercent)
+{
+	FNumberFormattingOptions Opts;
+	Opts.MinimumFractionalDigits = 2;
+	Opts.MaximumFractionalDigits = 2;
+
+	// FText::Format, not Printf: this is the one line on the HUD a player has to
+	// read as a sentence, and a sentence has to survive translation.
+	OddsText->SetText(FText::Format(
+		NSLOCTEXT("Hasard", "HouseEdge", "Every bet here costs {0}% of what you stake"),
+		FText::AsNumber(EdgePercent, &Opts)));
+}
+
+void UHasardHUDWidget::SetHouseEdgeUnknown()
+{
+	OddsText->SetText(NSLOCTEXT("Hasard", "HouseEdgeUnknown",
+		"House edge unavailable - the payout table is missing or inconsistent"));
+}
+
 void UHasardHUDWidget::NotifyRealityCheckDismissed()
 {
 	OnRealityCheckDismissed.Broadcast();

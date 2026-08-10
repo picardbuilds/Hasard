@@ -15,7 +15,10 @@ class UTextBlock;
 DECLARE_MULTICAST_DELEGATE(FOnRealityCheckDismissed);
 
 /**
- * Abstract, because the four BindWidget properties can only be satisfied by a
+ * The HUD's C++ half. Layout and styling are authored in WBP_HUD; this class owns
+ * the contract between the controller and those widgets.
+ *
+ * Abstract, because the BindWidget properties can only be satisfied by a
  * Blueprint subclass. Instantiating this class directly would leave them null.
  */
 UCLASS(Abstract)
@@ -39,6 +42,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Hasard|UI")
 	void NotifyRealityCheckDismissed();
 
+	/** The one figure that is true of every bet on the table. */
+	void SetHouseEdge(float EdgePercent);
+
+	/** Rows disagree, so no single figure is true. Say that rather than quoting one. */
+	void SetHouseEdgeUnknown();
+
 private:
 	/** Each name must match a Text Block of that name in WBP_HUD, or the Blueprint refuses to compile. */
 	UPROPERTY(meta = (BindWidget))
@@ -52,4 +61,7 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TimeText;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> OddsText;
 };

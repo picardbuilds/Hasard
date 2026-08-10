@@ -1,10 +1,12 @@
 // Copyright Picardbuilds. All Rights Reserved.
 
-
 #include "HasardGameMode.h"
+#include "HasardBettingComponent.h"
+#include "HasardPayoutTable.h"
 #include "HasardPlayerController.h"
 #include "HasardPlayerState.h"
 #include "HasardWheel.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 
@@ -16,7 +18,7 @@ AHasardGameMode::AHasardGameMode()
 	PlayerStateClass = AHasardPlayerState::StaticClass();
 }
 
-void AHasardGameMode::BeginPlay() 
+void AHasardGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -25,19 +27,40 @@ void AHasardGameMode::BeginPlay()
 
 	AActor* Found = UGameplayStatics::GetActorOfClass(GetWorld(), AHasardWheel::StaticClass());
 
-	BoundWheel = Cast<AHasardWheel>(Found);
-	if (BoundWheel)
+	if (AHasardWheel* Wheel = Cast<AHasardWheel>(Found))
 	{
-		BoundWheel->OnBallSettled.AddDynamic(this, &AHasardGameMode::HandleBallSettled);
+		Wheel->OnBallSettled.AddDynamic(this, &AHasardGameMode::HandleBallSettled);
+		BoundWheel = Wheel;
 	}
-	else
+
+	if (!PayoutTable)
 	{
-		UE_LOG(LogHasard, Warning, TEXT("GameMode: no wheel in the level, nothing to bind"));
+		UE_LOG(LogHasard, Error, TEXT("GameMode: no payout table on BP_HasardGameMode"));
+		return;
+	}
+
+	// The audit. Thirteen rows, one line each, and the edge column is the claim
+	// this module exists to make - so the game states it out loud on every run.
+	for (const FHasardPayoutRule& Rule : PayoutTable->Rules)
+	{
+		UE_LOG(LogHasard, Warning,
+			TEXT("Payout audit: %s pays %d:1, covers %d/%d, true odds %.2f:1, edge %.2f%%"),
+			*Rule.DisplayName.ToString(), Rule.PayoutRatio, Rule.CoveredNumbers,
+			PayoutTable->PocketCount, PayoutTable->GetTrueOdds(Rule),
+			PayoutTable->GetHouseEdge(Rule) * 100.0f);
+	}
+
+	float SharedEdge = 0.0f;
+	if (!PayoutTable->TryGetSharedHouseEdge(SharedEdge))
+	{
+		UE_LOG(LogHasard, Error,
+			TEXT("Payout audit: the rows do not share one edge. A row is wrong."));
 	}
 }
 
 void AHasardGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// The rule the PlayerController already follows: whoever binds, unbinds.
 	if (BoundWheel)
 	{
 		BoundWheel->OnBallSettled.RemoveDynamic(this, &AHasardGameMode::HandleBallSettled);
@@ -50,4 +73,31 @@ void AHasardGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AHasardGameMode::HandleBallSettled(int32 WinningPocket)
 {
 	UE_LOG(LogHasard, Warning, TEXT("Ball settled in pocket %d"), WinningPocket);
+	ResolveRound(WinningPocket);
+}
+
+void AHasardGameMode::ResolveRound(int32 WinningPocket)
+{
+	CurrentPhase = EHasardRoundPhase::Settling;
+
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	UHasardBettingComponent* Betting =
+		PlayerPawn ? PlayerPawn->FindComponentByClass<UHasardBettingComponent>() : nullptr;
+
+	if (!PayoutTable)
+	{
+		UE_LOG(LogHasard, Error, TEXT("ResolveRound: no payout table on BP_HasardGameMode"));
+	}
+	else if (!Betting)
+	{
+		UE_LOG(LogHasard, Warning, TEXT("ResolveRound: no betting component to settle"));
+	}
+	else
+	{
+		Betting->SettleRound(WinningPocket, PayoutTable);
+	}
+
+	// Whatever happened above, the table reopens. A round that cannot settle must
+	// not strand the game in Settling forever.
+	CurrentPhase = EHasardRoundPhase::Betting;
 }
