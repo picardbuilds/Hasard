@@ -4,6 +4,7 @@
 #include "HasardBankrollComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "HasardPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
@@ -38,4 +39,9 @@ void AHasardPlayerState::RealityCheck()
 {
 	UE_LOG(LogHasard, Warning, TEXT("REALITY CHECK - %.0f seconds this session"),
 		GetSessionElapsedSeconds());
+
+	if (AHasardPlayerController* PC = Cast<AHasardPlayerController>(GetPlayerController()))
+	{
+		PC->HandleRealityCheck(FMath::FloorToInt(GetSessionElapsedSeconds() / 60.0f));
+	}
 }
