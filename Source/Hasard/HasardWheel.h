@@ -28,6 +28,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Wheel")
 	void StartSpin();
 
+	UFUNCTION(BlueprintPure, Category = "Hasard|Wheel")
+	int32 GetPocketCount() const { return PocketCount; }
+
+	/** One spin, no animation. Public so the test and real play share one code path. */
+	int32 DetermineWinningPocket() const;
+
 protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
@@ -36,9 +42,6 @@ protected:
 private:
 	/** Timer callback. Nothing outside the wheel finishes a spin. */
 	void FinishSpin();
-
-	/** One spin, no animation. Module 13 promotes this to public for the distribution test. */
-	int32 DetermineWinningPocket() const;
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
 	TObjectPtr<USceneComponent> WheelRoot;
@@ -50,11 +53,11 @@ private:
 	TObjectPtr<UStaticMeshComponent> BallMesh;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel",
-		meta = (AllowPrivateAccess = "true"))
+		meta = (AllowPrivateAccess = "true", ClampMin = "1"))
 	int32 PocketCount = 37;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel",
-		meta = (AllowPrivateAccess = "true"))
+		meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
 	float SpinDuration = 6.0f;
 
 	/** Plain struct, not a UObject: no UPROPERTY needed. */

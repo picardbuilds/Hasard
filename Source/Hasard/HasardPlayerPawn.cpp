@@ -16,9 +16,8 @@
 #include "HasardInteractionComponent.h"
 #include "HasardInteractable.h"
 #include "HasardWheel.h"
+#include "HasardTypes.h"
 #include "Kismet/GameplayStatics.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
 AHasardPlayerPawn::AHasardPlayerPawn()
 {

@@ -1,8 +1,12 @@
 // Copyright Picardbuilds. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "HasardTypes.generated.h"
+
+/** One category for the whole project. Defined once, in HasardGameMode.cpp. */
+DECLARE_LOG_CATEGORY_EXTERN(LogHasard, Log, All);
 
 UENUM(BlueprintType)
 enum class EHasardBetType : uint8

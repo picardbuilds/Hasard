@@ -2,11 +2,10 @@
 
 #include "HasardPlayerState.h"
 #include "HasardBankrollComponent.h"
+#include "HasardTypes.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "HasardPlayerController.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
 AHasardPlayerState::AHasardPlayerState()
 {

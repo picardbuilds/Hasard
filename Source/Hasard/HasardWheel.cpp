@@ -1,12 +1,11 @@
 // Copyright Picardbuilds. All Rights Reserved.
 
 #include "HasardWheel.h"
+#include "HasardTypes.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
 AHasardWheel::AHasardWheel()
 {
@@ -46,6 +45,12 @@ void AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AHasardWheel::StartSpin()
 {
+	if (GetWorldTimerManager().IsTimerActive(SpinTimerHandle))
+	{
+		UE_LOG(LogHasard, Warning, TEXT("Wheel: StartSpin ignored - a spin is already running"));
+		return;
+	}
+
 	GetWorldTimerManager().SetTimer(SpinTimerHandle, this,
 		&AHasardWheel::FinishSpin, SpinDuration, false);
 }

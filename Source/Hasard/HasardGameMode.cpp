@@ -5,12 +5,13 @@
 #include "HasardPayoutTable.h"
 #include "HasardPlayerController.h"
 #include "HasardPlayerState.h"
+#include "HasardTypes.h"
 #include "HasardWheel.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
+DEFINE_LOG_CATEGORY(LogHasard);
 
 AHasardGameMode::AHasardGameMode()
 {
@@ -100,4 +101,40 @@ void AHasardGameMode::ResolveRound(int32 WinningPocket)
 	// Whatever happened above, the table reopens. A round that cannot settle must
 	// not strand the game in Settling forever.
 	CurrentPhase = EHasardRoundPhase::Betting;
+}
+
+void AHasardGameMode::HasardTestDistribution(int32 SpinCount)
+{
+	if (SpinCount <= 0)
+	{
+		UE_LOG(LogHasard, Error, TEXT("SpinCount must be positive"));
+		return;
+	}
+
+	AHasardWheel* Wheel = Cast<AHasardWheel>(
+		UGameplayStatics::GetActorOfClass(this, AHasardWheel::StaticClass()));
+	if (!Wheel)
+	{
+		UE_LOG(LogHasard, Error, TEXT("No wheel in the level"));
+		return;
+	}
+
+	const int32 PocketCount = Wheel->GetPocketCount();
+	
+	TArray<int32> Counts;
+	Counts.Init(0, PocketCount);
+
+	for (int32 i = 0; i < SpinCount; i++)
+	{
+		Counts[Wheel->DetermineWinningPocket()]++;
+	}
+
+	const float Expected = static_cast<float>(SpinCount) / PocketCount;
+
+	for (int32 Pocket = 0; Pocket < PocketCount; ++Pocket)
+	{
+		const float Deviation = (Counts[Pocket] - Expected) / Expected * 100.0f;
+		UE_LOG(LogHasard, Display, TEXT("Pocket %2d: %5d hits (%+.1f%% from expected)"),
+			Pocket, Counts[Pocket], Deviation);
+	}
 }

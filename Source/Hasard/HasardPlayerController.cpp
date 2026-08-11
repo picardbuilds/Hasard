@@ -11,8 +11,7 @@
 #include "HasardPayoutTable.h"
 #include "HasardHUDWidget.h"
 #include "HasardPlayerState.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
+#include "HasardTypes.h"
 
 void AHasardPlayerController::BeginPlay()
 {

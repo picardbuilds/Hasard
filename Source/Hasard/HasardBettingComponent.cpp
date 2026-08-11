@@ -7,8 +7,6 @@
 #include "HasardPlayerState.h"
 #include "GameFramework/Pawn.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
-
 /**
  * The bankroll lives on the PlayerState, not on this component. Both PlaceBet and
  * SettleRound need it, so the walk is written once. File-static: no header entry.

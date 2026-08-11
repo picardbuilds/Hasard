@@ -2,11 +2,10 @@
 
 
 #include "HasardBetSpot.h"
+#include "HasardTypes.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
 #include "HasardBettingComponent.h"
-
-DEFINE_LOG_CATEGORY_STATIC(LogHasard, Log, All);
 
 AHasardBetSpot::AHasardBetSpot()
 {

@@ -25,6 +25,10 @@ class HASARD_API AHasardGameMode : public AGameModeBase
 public:
 	AHasardGameMode();
 
+	/** Console: HasardTestDistribution 370000 */
+	UFUNCTION(Exec)
+	void HasardTestDistribution(int32 SpinCount);
+
 	/** Settles one round against the payout table. */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
 	void ResolveRound(int32 WinningPocket);
