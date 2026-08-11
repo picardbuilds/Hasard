@@ -8,6 +8,7 @@
 
 class AHasardWheel;
 class UHasardPayoutTable;
+class UHasardTableLayout;
 
 UENUM(BlueprintType)
 enum class EHasardRoundPhase : uint8
@@ -29,12 +30,19 @@ public:
 	UFUNCTION(Exec)
 	void HasardTestDistribution(int32 SpinCount);
 
+	/** Console: HasardShowCell 17 */
+	UFUNCTION(Exec)
+	void HasardShowCell(int32 Number);
+
 	/** Settles one round against the payout table. */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
 	void ResolveRound(int32 WinningPocket);
 
 	/** The HUD reads odds through this. Const: nothing may edit the table at runtime. */
 	const UHasardPayoutTable* GetPayoutTable() const { return PayoutTable; }
+
+	/** The felt reads its measurements through this. Const for the same reason. */
+	const UHasardTableLayout* GetTableLayout() const { return TableLayout; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -53,6 +61,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Round",
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHasardPayoutTable> PayoutTable;
+
+	/** Assigned on BP_HasardGameMode. Measurements never come from a literal either. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Round",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHasardTableLayout> TableLayout;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Round",
 		meta = (AllowPrivateAccess = "true"))

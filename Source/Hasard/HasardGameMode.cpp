@@ -5,6 +5,7 @@
 #include "HasardPayoutTable.h"
 #include "HasardPlayerController.h"
 #include "HasardPlayerState.h"
+#include "HasardTableLayout.h"
 #include "HasardTypes.h"
 #include "HasardWheel.h"
 #include "GameFramework/Pawn.h"
@@ -33,6 +34,15 @@ void AHasardGameMode::BeginPlay()
 		Wheel->OnBallSettled.AddDynamic(this, &AHasardGameMode::HandleBallSettled);
 		BoundWheel = Wheel;
 	}
+	else
+	{
+		UE_LOG(LogHasard, Error, TEXT("GameMode: no wheel in the level - rounds will never resolve"));
+	}
+
+	if (!TableLayout)
+	{
+		UE_LOG(LogHasard, Error, TEXT("GameMode: no table layout on BP_HasardGameMode"));
+	}
 
 	if (!PayoutTable)
 	{
@@ -40,8 +50,8 @@ void AHasardGameMode::BeginPlay()
 		return;
 	}
 
-	// The audit. Thirteen rows, one line each, and the edge column is the claim
-	// this module exists to make - so the game states it out loud on every run.
+	// The audit. Fifteen rows, one line each, and the edge column is the claim
+	// this project exists to make - so the game states it out loud on every run.
 	for (const FHasardPayoutRule& Rule : PayoutTable->Rules)
 	{
 		UE_LOG(LogHasard, Warning,
@@ -120,11 +130,11 @@ void AHasardGameMode::HasardTestDistribution(int32 SpinCount)
 	}
 
 	const int32 PocketCount = Wheel->GetPocketCount();
-	
+
 	TArray<int32> Counts;
 	Counts.Init(0, PocketCount);
 
-	for (int32 i = 0; i < SpinCount; i++)
+	for (int32 i = 0; i < SpinCount; ++i)
 	{
 		Counts[Wheel->DetermineWinningPocket()]++;
 	}
@@ -137,4 +147,34 @@ void AHasardGameMode::HasardTestDistribution(int32 SpinCount)
 		UE_LOG(LogHasard, Display, TEXT("Pocket %2d: %5d hits (%+.1f%% from expected)"),
 			Pocket, Counts[Pocket], Deviation);
 	}
+}
+
+void AHasardGameMode::HasardShowCell(int32 Number)
+{
+	if (!TableLayout)
+	{
+		UE_LOG(LogHasard, Error, TEXT("No table layout on BP_HasardGameMode"));
+		return;
+	}
+
+	if (Number == 0)
+	{
+		UE_LOG(LogHasard, Display, TEXT("0 has its own box beside the grid, so it has no column or row"));
+		return;
+	}
+
+	const int32 Column = TableLayout->GetColumnOf(Number);
+	const int32 Row = TableLayout->GetRowOf(Number);
+
+	if (Column == INDEX_NONE || Row == INDEX_NONE)
+	{
+		UE_LOG(LogHasard, Error, TEXT("%d is not a number on this grid"), Number);
+		return;
+	}
+
+	const FVector2D Center = TableLayout->GetCellCenter(Column, Row);
+
+	UE_LOG(LogHasard, Display, TEXT("%d is column %d, row %d - center (%.1f, %.1f), %s"),
+		Number, Column, Row, Center.X, Center.Y,
+		TableLayout->IsRedNumber(Number) ? TEXT("red") : TEXT("black"));
 }
