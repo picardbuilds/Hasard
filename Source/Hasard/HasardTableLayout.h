@@ -40,6 +40,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
 	FVector2D GetGridExtent() const;
 
+	/** Builds all 157 bet positions. Deterministic: same asset in, same array out, same order. */
+	void BuildPositions(TArray<FHasardBetPosition>& OutPositions) const;
+
 	/** True for the eighteen red numbers on a single-zero wheel. */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
 	bool IsRedNumber(int32 Number) const;
@@ -54,6 +57,10 @@ public:
 	float GetLineTolerance() const { return LineTolerance; }
 
 private:
+	/** Adds one position and stamps its PositionId from the array index. */
+	void AddPosition(TArray<FHasardBetPosition>& OutPositions, EHasardBetType BetType,
+		const TArray<int32>& Covered, const FVector2D& ChipLocation, const FText& DisplayName) const;
+
 	/** Twelve columns of three. Editable only because a future variant may differ. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1"))

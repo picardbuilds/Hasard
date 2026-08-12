@@ -5,6 +5,7 @@
 #include "HasardBankrollComponent.h"
 #include "HasardPayoutTable.h"
 #include "HasardPlayerState.h"
+#include "HasardTableLayout.h"
 #include "GameFramework/Pawn.h"
 
 /**
@@ -19,15 +20,26 @@ static UHasardBankrollComponent* FindBankroll(const UActorComponent* Self)
 }
 
 /**
- * Red pockets on a European wheel. Not derivable from the number - which pockets
- * are red is a fact about the physical wheel, so it is a table, not arithmetic.
+ * Trio and Basket both include zero, and PrimaryNumber cannot say which trio a
+ * chip on 0/1/2 means as against one on 0/2/3. Neither is settleable from this
+ * struct, so neither may be accepted. Module 2 replaces PrimaryNumber with a
+ * position id and both become ordinary.
  */
-static bool IsRedPocket(int32 Pocket)
+static bool IsSettleableBetType(EHasardBetType BetType)
 {
-	static const TSet<int32> RedPockets = {
-		1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
-	return RedPockets.Contains(Pocket);
+	return BetType != EHasardBetType::Trio && BetType != EHasardBetType::Basket;
 }
+
+/**
+ * Inserting an enumerator into EHasardBetType without adding a case below produces
+ * a bet that takes the stake and can never win, and nothing reports it - no compiler
+ * warning, no log line, no failed test. This assert is what turns that into a build
+ * failure. It catches an insertion anywhere before High, which is how Trio and Basket
+ * arrived; it does not catch an append after High, so keep High last.
+ */
+static_assert(static_cast<uint8>(EHasardBetType::High) == 14,
+	"EHasardBetType changed. Add a case to BetCoversPocket, add a rule to "
+	"DA_EuropeanPayouts, then update this count.");
 
 /**
  * Does this bet cover the winning pocket?
@@ -39,8 +51,12 @@ static bool IsRedPocket(int32 Pocket)
  *
  * Zero is deliberately excluded from every outside bet. That one pocket is the entire
  * house edge, and writing it as a special case is more honest than hiding it in a range.
+ *
+ * Layout is a reference, not a pointer: SettleRound has already refused the round if
+ * the asset is missing, so there is nothing to check for here.
  */
-static bool BetCoversPocket(const FHasardBet& Bet, int32 Pocket)
+static bool BetCoversPocket(const FHasardBet& Bet, int32 Pocket,
+	const UHasardTableLayout& Layout)
 {
 	const int32 P = Bet.PrimaryNumber;
 
@@ -54,14 +70,24 @@ static bool BetCoversPocket(const FHasardBet& Bet, int32 Pocket)
 	case EHasardBetType::SixLine:    return Pocket >= P && Pocket <= P + 5;
 	case EHasardBetType::Column:     return Pocket != 0 && (Pocket % 3) == (P % 3);
 	case EHasardBetType::Dozen:      return Pocket >= P && Pocket <= P + 11;
-	case EHasardBetType::Red:        return Pocket != 0 && IsRedPocket(Pocket);
-	case EHasardBetType::Black:      return Pocket != 0 && !IsRedPocket(Pocket);
+	case EHasardBetType::Red:        return Pocket != 0 && Layout.IsRedNumber(Pocket);
+	case EHasardBetType::Black:      return Pocket != 0 && !Layout.IsRedNumber(Pocket);
 	case EHasardBetType::Even:       return Pocket != 0 && (Pocket % 2) == 0;
 	case EHasardBetType::Odd:        return Pocket != 0 && (Pocket % 2) == 1;
 	case EHasardBetType::Low:        return Pocket >= 1 && Pocket <= 18;
 	case EHasardBetType::High:       return Pocket >= 19 && Pocket <= 36;
+
+	case EHasardBetType::Trio:
+	case EHasardBetType::Basket:
+		// PlaceBet refuses these, so arriving here means one got in another way.
+		// Say so rather than returning a quiet no.
+		UE_LOG(LogHasard, Error, TEXT("BetCoversPocket: %s cannot be settled from PrimaryNumber"),
+			*UEnum::GetValueAsString(Bet.BetType));
+		return false;
 	}
 
+	// Unreachable while the assert above holds. Kept because the compiler requires a
+	// return, and it is the line a missing case would fall through to.
 	return false;
 }
 
@@ -77,7 +103,17 @@ bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumb
 		return false;
 	}
 
-	UHasardBankrollComponent* Bank = FindBankroll(this);		
+	// Refuse before the money moves. A stake taken for a bet that cannot win is the
+	// worst failure this component has, and it is the one that reports nothing.
+	if (!IsSettleableBetType(BetType))
+	{
+		UE_LOG(LogHasard, Error,
+			TEXT("PlaceBet refused: %s needs a bet position, which arrives in module 2"),
+			*UEnum::GetValueAsString(BetType));
+		return false;
+	}
+
+	UHasardBankrollComponent* Bank = FindBankroll(this);
 
 	// Take the money FIRST. A bet that was never paid for must never enter the array.
 	if (!Bank || !Bank->TryStake(Stake))
@@ -100,14 +136,8 @@ bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumb
 	return true;
 }
 
-void UHasardBettingComponent::ClearAllBets() 
-{
-	ActiveBets.Empty();
-	UE_LOG(LogHasard, Warning, TEXT("ClearAllBets"));
-}
-
 void UHasardBettingComponent::SettleRound(int32 WinningPocket,
-	const UHasardPayoutTable* PayoutTable)
+	const UHasardPayoutTable* PayoutTable, const UHasardTableLayout* TableLayout)
 {
 	const int32 Placed = ActiveBets.Num();
 	int32 Won = 0;
@@ -117,6 +147,15 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 	{
 		// Refuse to guess. Paying from a literal is the thing this module removes.
 		UE_LOG(LogHasard, Error, TEXT("SettleRound: no payout table, paying nobody"));
+		ActiveBets.Empty();
+		return;
+	}
+
+	if (!TableLayout)
+	{
+		// The same refusal. Without the layout there is no red list, so a red bet
+		// would settle as black - silently, and only on half the spins.
+		UE_LOG(LogHasard, Error, TEXT("SettleRound: no table layout, paying nobody"));
 		ActiveBets.Empty();
 		return;
 	}
@@ -134,7 +173,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 
 	for (const FHasardBet& Bet : ActiveBets)
 	{
-		if (!BetCoversPocket(Bet, WinningPocket))
+		if (!BetCoversPocket(Bet, WinningPocket, *TableLayout))
 		{
 			continue;
 		}
@@ -155,16 +194,23 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 		++Won;
 		Returned += Payout;
 	}
+
 	ActiveBets.Empty();
 
 	UE_LOG(LogHasard, Warning, TEXT("SettleRound on %d: %d placed, %d won, %d returned"),
 		WinningPocket, Placed, Won, Returned);
 }
 
-int32 UHasardBettingComponent::GetTotalStaked() const 
+void UHasardBettingComponent::ClearAllBets()
+{
+	ActiveBets.Empty();
+	UE_LOG(LogHasard, Warning, TEXT("ClearAllBets"));
+}
+
+int32 UHasardBettingComponent::GetTotalStaked() const
 {
 	int32 Total = 0;
-	for (const FHasardBet& Bet : ActiveBets) 
+	for (const FHasardBet& Bet : ActiveBets)
 	{
 		Total += Bet.Stake;
 	}

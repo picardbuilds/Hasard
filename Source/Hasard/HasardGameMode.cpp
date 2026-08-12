@@ -99,13 +99,17 @@ void AHasardGameMode::ResolveRound(int32 WinningPocket)
 	{
 		UE_LOG(LogHasard, Error, TEXT("ResolveRound: no payout table on BP_HasardGameMode"));
 	}
+	else if (!TableLayout)
+	{
+		UE_LOG(LogHasard, Error, TEXT("ResolveRound: no table layout on BP_HasardGameMode"));
+	}
 	else if (!Betting)
 	{
 		UE_LOG(LogHasard, Warning, TEXT("ResolveRound: no betting component to settle"));
 	}
 	else
 	{
-		Betting->SettleRound(WinningPocket, PayoutTable);
+		Betting->SettleRound(WinningPocket, PayoutTable, TableLayout);
 	}
 
 	// Whatever happened above, the table reopens. A round that cannot settle must
@@ -177,4 +181,66 @@ void AHasardGameMode::HasardShowCell(int32 Number)
 	UE_LOG(LogHasard, Display, TEXT("%d is column %d, row %d - center (%.1f, %.1f), %s"),
 		Number, Column, Row, Center.X, Center.Y,
 		TableLayout->IsRedNumber(Number) ? TEXT("red") : TEXT("black"));
+}
+
+void AHasardGameMode::HasardAuditLayout()
+{
+	if (!TableLayout || !PayoutTable)
+	{
+		UE_LOG(LogHasard, Error,
+			TEXT("Assign both TableLayout and PayoutTable on BP_HasardGameMode"));
+		return;
+	}
+
+	TArray<FHasardBetPosition> Positions;
+	TableLayout->BuildPositions(Positions);
+
+	// The claim being tested: every position on a single-zero table pays 2.70% to the house.
+	const float ExpectedEdge = 1.0f / static_cast<float>(PayoutTable->PocketCount);
+
+	TMap<EHasardBetType, int32> CountByType;
+	int32 Offenders = 0;
+
+	for (const FHasardBetPosition& Position : Positions)
+	{
+		CountByType.FindOrAdd(Position.BetType)++;
+
+		const FHasardPayoutRule* Rule = PayoutTable->FindRule(Position.BetType);
+		if (!Rule)
+		{
+			UE_LOG(LogHasard, Error, TEXT("Position %d (%s): no payout row for this bet type"),
+				Position.PositionId, *Position.DisplayName.ToString());
+			++Offenders;
+			continue;
+		}
+
+		// Two different CoveredNumbers: the position holds the actual numbers,
+		// the payout row holds how many there are meant to be. They must agree.
+		if (Position.CoveredNumbers.Num() != Rule->CoveredNumbers)
+		{
+			UE_LOG(LogHasard, Error,
+				TEXT("Position %d (%s): covers %d numbers, payout row expects %d"),
+				Position.PositionId, *Position.DisplayName.ToString(),
+				Position.CoveredNumbers.Num(), Rule->CoveredNumbers);
+			++Offenders;
+			continue;
+		}
+
+		if (!FMath::IsNearlyEqual(PayoutTable->GetHouseEdge(*Rule), ExpectedEdge, 0.0001f))
+		{
+			UE_LOG(LogHasard, Error, TEXT("Position %d (%s): edge %.2f%%, expected %.2f%%"),
+				Position.PositionId, *Position.DisplayName.ToString(),
+				PayoutTable->GetHouseEdge(*Rule) * 100.0f, ExpectedEdge * 100.0f);
+			++Offenders;
+		}
+	}
+
+	for (const TPair<EHasardBetType, int32>& Pair : CountByType)
+	{
+		UE_LOG(LogHasard, Display, TEXT("%s: %d positions"),
+			*UEnum::GetDisplayValueAsText(Pair.Key).ToString(), Pair.Value);
+	}
+
+	UE_LOG(LogHasard, Display, TEXT("%d positions generated, %d failing the edge check"),
+		Positions.Num(), Offenders);
 }
