@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/FloatingPawnMovement.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "HasardBettingComponent.h"
 #include "InputActionValue.h"
@@ -34,6 +35,14 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 	TableCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TableCamera"));
 	TableCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TableCamera->bUsePawnControlRotation = false;
+
+	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
+
+	// A walk, not a sprint. The defaults are 1200 uu/s, which crosses the whole felt in
+	// under a second and makes aiming at a 24 cm cell a matter of luck.
+	Movement->MaxSpeed = 250.0f;
+	Movement->Acceleration = 1200.0f;
+	Movement->Deceleration = 2400.0f;
 
 	BettingComp = CreateDefaultSubobject<UHasardBettingComponent>(TEXT("BettingComp"));
 
@@ -76,6 +85,7 @@ void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EIC->BindAction(LookAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
+		EIC->BindAction(MoveAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Move);
 		EIC->BindAction(PlaceBetAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
 		EIC->BindAction(SpinAction,     ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
 	}
@@ -90,6 +100,18 @@ void AHasardPlayerPawn::Look(const FInputActionValue& Value)
 	const FVector2D Input = Value.Get<FVector2D>();
 	AddControllerYawInput(Input.X);
 	AddControllerPitchInput(Input.Y);
+}
+
+void AHasardPlayerPawn::Move(const FInputActionValue& Value)
+{
+	const FVector2D Input = Value.Get<FVector2D>();
+
+	// Yaw only. Pitch belongs to the camera: looking down at the felt must not mean
+	// walking into the floor, and looking up must not lift you off it.
+	const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
+
+	AddMovementInput(YawOnly.RotateVector(FVector::ForwardVector), Input.Y);
+	AddMovementInput(YawOnly.RotateVector(FVector::RightVector), Input.X);
 }
 
 void AHasardPlayerPawn::PlaceBet()

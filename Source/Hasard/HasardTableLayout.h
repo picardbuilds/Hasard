@@ -121,12 +121,12 @@ private:
 	/** Size of one number cell in centimeters, along the twelve columns. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
-	float CellSizeX = 12.0f;
+	float CellSizeX = 24.0f;
 
 	/** Size of one number cell in centimeters, across the three rows. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
-	float CellSizeY = 12.0f;
+	float CellSizeY = 24.0f;
 
 	/** Felt-local position of the near corner of cell (0,0). Everything is measured from here. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
@@ -136,18 +136,18 @@ private:
 	/** Width of the zero box, which sits at negative X of the grid and spans all three rows. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
-	float ZeroBoxWidth = 12.0f;
+	float ZeroBoxWidth = 24.0f;
 
 	/** Depth of each outside-bet band. Dozens sit against the grid, even-money beyond them. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
-	float OutsideBandDepth = 12.0f;
+	float OutsideBandDepth = 24.0f;
 
 	/**
 	 * How close to a line counts as being on it, as a fraction of a cell.
-	 * 0.22 means the middle 56% of a cell is a straight up and the rest is a line bet.
+	 * 0.15 means the middle 70% of a cell is a straight up and the rest is a line bet.
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.05", ClampMax = "0.45"))
-	float LineTolerance = 0.22f;
+	float LineTolerance = 0.15f;
 };
