@@ -39,14 +39,18 @@ struct FHasardBetPosition
 {
 	GENERATED_BODY()
 
-	/** Index into the generated array. Stable for a given layout asset. */
+	/**
+	 * Index into the generated array, stamped from its own position on append.
+	 * The array is append-only for that reason: a sort or a remove leaves every
+	 * id pointing at the wrong position, and nothing would report it.
+	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
 	int32 PositionId = INDEX_NONE;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
 	EHasardBetType BetType = EHasardBetType::StraightUp;
 
-	/** Every pocket this position pays on, ascending. Its length decides the payout. */
+	/** Every pocket this position pays on, ascending. The audit checks this count against the payout rule. */
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
 	TArray<int32> CoveredNumbers;
 
@@ -59,16 +63,23 @@ struct FHasardBetPosition
 	FText DisplayName;
 };
 
+/**
+ * A chip on the felt: which position, and how much.
+ *
+ * BetType and the covered numbers are not stored here. They belong to the position,
+ * and duplicating them would let a bet disagree with the table it was placed on.
+ * Settlement looks the position up by id, so an id that does not exist is a loud
+ * error rather than a bet that quietly never wins. The stake is already taken by
+ * then, which is why PlaceBet is where a bad id has to be refused.
+ */
 USTRUCT(BlueprintType)
 struct FHasardBet
 {
 	GENERATED_BODY()
 
+	/** Index into the layout's generated positions. INDEX_NONE is not a bet. */
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Bet")
-	EHasardBetType BetType = EHasardBetType::StraightUp;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Bet")
-	int32 PrimaryNumber = 0;
+	int32 PositionId = INDEX_NONE;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Bet")
 	int32 Stake = 0;

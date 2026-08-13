@@ -13,18 +13,20 @@ UHasardInteractionComponent::UHasardInteractionComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-AActor* UHasardInteractionComponent::TraceForInteractable() const 
+bool UHasardInteractionComponent::TraceForInteractable(FHitResult& OutHit) const 
 {
+	OutHit = FHitResult();
+
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!OwnerPawn)
 	{
-		return nullptr;
+		return false;
 	}
 	
 	const UWorld* World = GetWorld();
 	if (!World)
 	{
-		return nullptr;
+		return false;
 	}
 
 	FVector EyeLocation;
@@ -36,13 +38,21 @@ AActor* UHasardInteractionComponent::TraceForInteractable() const
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(OwnerPawn);
 
-	FHitResult Hit;
 	const bool bHit = World->SweepSingleByChannel(
-		Hit, EyeLocation, End, FQuat::Identity, ECC_Visibility,
+		OutHit, EyeLocation, End, FQuat::Identity, ECC_Visibility,
 		FCollisionShape::MakeSphere(TraceRadius), Params);
 
 	DrawDebugLine(World, EyeLocation, End,
 		bHit ? FColor::Green : FColor::Red, false, 1.0f, 0, 1.5f);
 
-	return bHit ? Hit.GetActor() : nullptr;
+	// A sphere sweep that starts already overlapping reports bStartPenetrating and
+	// leaves ImpactPoint at the trace start, which would resolve to a bet nowhere near
+	// where the player was looking. Refuse it rather than guess.
+	if (bHit && OutHit.bStartPenetrating)
+	{
+		OutHit = FHitResult();
+		return false;
+	}
+
+	return bHit;
 }

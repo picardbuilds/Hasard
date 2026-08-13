@@ -20,96 +20,29 @@ static UHasardBankrollComponent* FindBankroll(const UActorComponent* Self)
 }
 
 /**
- * Trio and Basket both include zero, and PrimaryNumber cannot say which trio a
- * chip on 0/1/2 means as against one on 0/2/3. Neither is settleable from this
- * struct, so neither may be accepted. Module 2 replaces PrimaryNumber with a
- * position id and both become ordinary.
- */
-static bool IsSettleableBetType(EHasardBetType BetType)
-{
-	return BetType != EHasardBetType::Trio && BetType != EHasardBetType::Basket;
-}
-
-/**
- * Inserting an enumerator into EHasardBetType without adding a case below produces
- * a bet that takes the stake and can never win, and nothing reports it - no compiler
- * warning, no log line, no failed test. This assert is what turns that into a build
- * failure. It catches an insertion anywhere before High, which is how Trio and Basket
- * arrived; it does not catch an append after High, so keep High last.
+ * Every bet type needs a row in the payout table and a block in BuildPositions, and
+ * neither of those is checked by the compiler. This assert is what turns adding an
+ * enumerator into a build failure rather than a bet that quietly never pays.
+ *
+ * It fires on an insertion anywhere before High, which is how Trio and Basket arrived.
+ * It does not fire on an append after High, so keep High last.
+ *
+ * IsNamedOnFelt is not listed here because it needs no reminder: its switch has no
+ * default, so the compiler refuses a new enumerator on its own.
  */
 static_assert(static_cast<uint8>(EHasardBetType::High) == 14,
-	"EHasardBetType changed. Add a case to BetCoversPocket, add a rule to "
-	"DA_EuropeanPayouts, then update this count.");
-
-/**
- * Does this bet cover the winning pocket?
- *
- * PrimaryNumber is the lowest number of the group, and the groups follow the felt's
- * three-column layout: a street is P, P+1, P+2 along a row; a corner is P, P+1, P+3,
- * P+4; a six line is P through P+5. Splits are the horizontal kind only, because
- * FHasardBet carries a single number and a vertical split cannot be expressed in one.
- *
- * Zero is deliberately excluded from every outside bet. That one pocket is the entire
- * house edge, and writing it as a special case is more honest than hiding it in a range.
- *
- * Layout is a reference, not a pointer: SettleRound has already refused the round if
- * the asset is missing, so there is nothing to check for here.
- */
-static bool BetCoversPocket(const FHasardBet& Bet, int32 Pocket,
-	const UHasardTableLayout& Layout)
-{
-	const int32 P = Bet.PrimaryNumber;
-
-	switch (Bet.BetType)
-	{
-	case EHasardBetType::StraightUp: return Pocket == P;
-	case EHasardBetType::Split:      return Pocket == P || Pocket == P + 1;
-	case EHasardBetType::Street:     return Pocket >= P && Pocket <= P + 2;
-	case EHasardBetType::Corner:     return Pocket == P || Pocket == P + 1
-		                                 || Pocket == P + 3 || Pocket == P + 4;
-	case EHasardBetType::SixLine:    return Pocket >= P && Pocket <= P + 5;
-	case EHasardBetType::Column:     return Pocket != 0 && (Pocket % 3) == (P % 3);
-	case EHasardBetType::Dozen:      return Pocket >= P && Pocket <= P + 11;
-	case EHasardBetType::Red:        return Pocket != 0 && Layout.IsRedNumber(Pocket);
-	case EHasardBetType::Black:      return Pocket != 0 && !Layout.IsRedNumber(Pocket);
-	case EHasardBetType::Even:       return Pocket != 0 && (Pocket % 2) == 0;
-	case EHasardBetType::Odd:        return Pocket != 0 && (Pocket % 2) == 1;
-	case EHasardBetType::Low:        return Pocket >= 1 && Pocket <= 18;
-	case EHasardBetType::High:       return Pocket >= 19 && Pocket <= 36;
-
-	case EHasardBetType::Trio:
-	case EHasardBetType::Basket:
-		// PlaceBet refuses these, so arriving here means one got in another way.
-		// Say so rather than returning a quiet no.
-		UE_LOG(LogHasard, Error, TEXT("BetCoversPocket: %s cannot be settled from PrimaryNumber"),
-			*UEnum::GetValueAsString(Bet.BetType));
-		return false;
-	}
-
-	// Unreachable while the assert above holds. Kept because the compiler requires a
-	// return, and it is the line a missing case would fall through to.
-	return false;
-}
+	"EHasardBetType changed. Add a rule to DA_EuropeanPayouts, add a block to "
+	"UHasardTableLayout::BuildPositions, then update this count.");
 
 UHasardBettingComponent::UHasardBettingComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumber, int32 Stake)
+bool UHasardBettingComponent::PlaceBet(int32 PositionId, int32 Stake)
 {
-	if (Stake <= 0)
+	if (Stake <= 0 || PositionId == INDEX_NONE)
 	{
-		return false;
-	}
-
-	// Refuse before the money moves. A stake taken for a bet that cannot win is the
-	// worst failure this component has, and it is the one that reports nothing.
-	if (!IsSettleableBetType(BetType))
-	{
-		UE_LOG(LogHasard, Error,
-			TEXT("PlaceBet refused: %s needs a bet position, which arrives in module 2"),
-			*UEnum::GetValueAsString(BetType));
 		return false;
 	}
 
@@ -124,9 +57,8 @@ bool UHasardBettingComponent::PlaceBet(EHasardBetType BetType, int32 PrimaryNumb
 
 	// Named fields, not FHasardBet{ ... } - the Module 9 warning still applies.
 	FHasardBet Bet;
-	Bet.BetType       = BetType;
-	Bet.PrimaryNumber = PrimaryNumber;
-	Bet.Stake         = Stake;
+	Bet.PositionId = PositionId;
+	Bet.Stake      = Stake;
 
 	ActiveBets.Add(Bet);
 
@@ -153,8 +85,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 
 	if (!TableLayout)
 	{
-		// The same refusal. Without the layout there is no red list, so a red bet
-		// would settle as black - silently, and only on half the spins.
+		// Without the layout a stored id means nothing, so no bet can be evaluated.
 		UE_LOG(LogHasard, Error, TEXT("SettleRound: no table layout, paying nobody"));
 		ActiveBets.Empty();
 		return;
@@ -173,16 +104,27 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 
 	for (const FHasardBet& Bet : ActiveBets)
 	{
-		if (!BetCoversPocket(Bet, WinningPocket, *TableLayout))
+		const FHasardBetPosition* Position = TableLayout->GetPositionById(Bet.PositionId);
+		if (!Position)
+		{
+			// A stored id with no position means the layout changed under a live bet.
+			UE_LOG(LogHasard, Error, TEXT("SettleRound: bet on id %d, which is not a position"),
+				Bet.PositionId);
+			continue;
+		}
+
+		// The whole of what used to be a thirteen-case switch. A position knows the
+		// numbers it covers, so zero needs no special case and no bet type does either.
+		if (!Position->CoveredNumbers.Contains(WinningPocket))
 		{
 			continue;
 		}
 
-		const FHasardPayoutRule* Rule = PayoutTable->FindRule(Bet.BetType);
+		const FHasardPayoutRule* Rule = PayoutTable->FindRule(Position->BetType);
 		if (!Rule)
 		{
 			UE_LOG(LogHasard, Error, TEXT("SettleRound: no rule for %s, bet not paid"),
-				*UEnum::GetValueAsString(Bet.BetType));
+				*UEnum::GetValueAsString(Position->BetType));
 			continue;
 		}
 

@@ -99,10 +99,17 @@ void AHasardPlayerPawn::PlaceBet()
 		return;
 	}
 
-	AActor* Hit = InteractionComp->TraceForInteractable();
-	if (Hit && Hit->Implements<UHasardInteractable>())
+	FHitResult Hit;
+	if (!InteractionComp->TraceForInteractable(Hit))
 	{
-		IHasardInteractable::Execute_OnPlayerInteract(Hit, this);
+		return;
+	}
+
+	AActor* HitActor = Hit.GetActor();
+	if (HitActor && HitActor->Implements<UHasardInteractable>())
+	{
+		// ImpactPoint, not the actor location: on the felt the point is the bet.
+		IHasardInteractable::Execute_OnPlayerInteract(HitActor, this, Hit.ImpactPoint);
 	}
 }
 

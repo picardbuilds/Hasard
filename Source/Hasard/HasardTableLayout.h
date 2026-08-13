@@ -36,12 +36,39 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
 	FVector2D GetCellCenter(int32 Column, int32 Row) const;
 
-	/** Far corner of the number grid, so callers can size the felt without repeating the sum. */
+	/** Far corner of the number grid. Not the felt - the zero box and the outside bands extend past it. */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
 	FVector2D GetGridExtent() const;
 
-	/** Builds all 157 bet positions. Deterministic: same asset in, same array out, same order. */
-	void BuildPositions(TArray<FHasardBetPosition>& OutPositions) const;
+	/**
+	 * The whole felt, including the zero box and both outside bands.
+	 *
+	 * Every caller that needs a size asks for it here rather than adding the parts up,
+	 * because a felt drawn from one sum and traced against another is a felt where
+	 * clicks land in the wrong place near the edges.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
+	void GetFeltBounds(FVector2D& OutMin, FVector2D& OutMax) const;
+
+	/**
+	 * All 157 positions, built once and reused.
+	 *
+	 * Derived data, so it is deliberately not a UPROPERTY: serializing it would put a
+	 * stale copy in the .uasset that could disagree with the numbers above it.
+	 */
+	const TArray<FHasardBetPosition>& GetPositions() const;
+
+	/** One position by id, or null. Null means the id was never valid, which is worth logging. */
+	const FHasardBetPosition* GetPositionById(int32 PositionId) const;
+
+	/**
+	 * Which position a chip at this felt-local point means, or INDEX_NONE for nowhere.
+	 *
+	 * This is the croupier reading the felt, and it is the only place that decides what
+	 * a click means. LineTolerance is what makes a point near a boundary a line bet.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
+	int32 ResolvePosition(const FVector2D& LocalPoint) const;
 
 	/** True for the eighteen red numbers on a single-zero wheel. */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
@@ -56,10 +83,31 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
 	float GetLineTolerance() const { return LineTolerance; }
 
+	/** Raw values, exposed so a caller drawing grid lines need not rebuild them from cell centers. */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
+	FVector2D GetGridOrigin() const { return GridOrigin; }
+
+	UFUNCTION(BlueprintPure, Category = "Hasard|Layout")
+	FVector2D GetCellSize() const { return FVector2D(CellSizeX, CellSizeY); }
+
+	/** Builds all 157 bet positions. Deterministic: same asset in, same array out, same order. */
+	void BuildPositions(TArray<FHasardBetPosition>& OutPositions) const;
+
+#if WITH_EDITOR
+	/** Editing any measurement invalidates the cache, or the felt keeps drawing the old numbers. */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 private:
 	/** Adds one position and stamps its PositionId from the array index. */
 	void AddPosition(TArray<FHasardBetPosition>& OutPositions, EHasardBetType BetType,
 		const TArray<int32>& Covered, const FVector2D& ChipLocation, const FText& DisplayName) const;
+
+	/** Finds a generated position by type and covered set. Used only by ResolvePosition. */
+	int32 FindPositionId(EHasardBetType BetType, const TArray<int32>& Covered) const;
+
+	/** Built on first request, cleared when a property changes. Never serialized. */
+	mutable TArray<FHasardBetPosition> CachedPositions;
 
 	/** Twelve columns of three. Editable only because a future variant may differ. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Layout",

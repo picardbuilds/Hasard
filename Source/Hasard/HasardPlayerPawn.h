@@ -9,6 +9,7 @@
 class USceneComponent;
 class USpringArmComponent;
 class UCameraComponent;
+class UFloatingPawnMovement;
 class UInputMappingContext;
 class UInputAction;
 class UHasardBettingComponent;
@@ -47,6 +48,14 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
 	TObjectPtr<UCameraComponent> TableCamera;
 
+	/**
+	 * Movement without a Character. A Character brings a capsule, gravity, crouching and
+	 * a whole animation contract; a player at a table needs none of it and would have to
+	 * be told to ignore all of it. This slides a pawn about and stops.
+	 */
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Movement")
+	TObjectPtr<UFloatingPawnMovement> Movement;
+
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Betting")
 	TObjectPtr<UHasardBettingComponent> BettingComp;
 
@@ -59,6 +68,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputAction> LookAction;
 
+	/** Axis2D. X is strafe, Y is forward - the mapping in IMC_Table decides which key is which. */
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputAction> MoveAction;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputAction> PlaceBetAction;
 
@@ -66,6 +79,7 @@ private:
 	TObjectPtr<UInputAction> SpinAction;
 
 	void Look(const FInputActionValue& Value);
+	void Move(const FInputActionValue& Value);
 	void PlaceBet();
 	void RequestSpin();
 };

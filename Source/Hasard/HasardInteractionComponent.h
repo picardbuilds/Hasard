@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/HitResult.h"
 #include "HasardInteractionComponent.generated.h"
-
 
 UCLASS( ClassGroup=(Hasard), meta=(BlueprintSpawnableComponent) )
 class HASARD_API UHasardInteractionComponent : public UActorComponent
@@ -15,9 +15,14 @@ class HASARD_API UHasardInteractionComponent : public UActorComponent
 public:	
 	UHasardInteractionComponent();
 
-	/** Traces from the owning pawn eyes. Returns the blocking actor, or null. */
+	/**
+	 * Traces from the owning pawn's eyes and reports the whole hit.
+	 *
+	 * Returns the FHitResult rather than the actor, because the impact point is what
+	 * turns a click on the felt into one of 157 bets. Check bBlockingHit on the way out.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Interaction")
-	AActor* TraceForInteractable() const;
+	bool TraceForInteractable(FHitResult& OutHit) const;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Interaction", meta = (ClampMin = "1.0"))
