@@ -274,7 +274,7 @@ bool UHasardTableLayout::IsRedNumber(int32 Number) const
 
 void UHasardTableLayout::AddPosition(TArray<FHasardBetPosition>& OutPositions,
 	EHasardBetType BetType, const TArray<int32>& Covered,
-	const FVector2D& ChipLocation, const FText& DisplayName) const
+	const FVector2D& ChipLocation, const FText& DisplayName, const FVector2D& BoxSize) const
 {
 	FHasardBetPosition Position;
 	Position.PositionId = OutPositions.Num();   // the index is the id, so they cannot drift
@@ -283,6 +283,7 @@ void UHasardTableLayout::AddPosition(TArray<FHasardBetPosition>& OutPositions,
 	Position.CoveredNumbers.Sort();
 	Position.ChipLocation = ChipLocation;
 	Position.DisplayName = DisplayName;
+	Position.BoxSize = BoxSize;
 
 	OutPositions.Add(MoveTemp(Position));
 }
@@ -296,9 +297,11 @@ void UHasardTableLayout::BuildPositions(TArray<FHasardBetPosition>& OutPositions
 	const float ZeroCenterX = GridOrigin.X - ZeroBoxWidth * 0.5f;
 	const float ZeroCenterY = GridOrigin.Y + NumberRows * CellSizeY * 0.5f;
 
-	// 1. Zero, then one straight up per cell.
+	// 1. Zero, then one straight up per cell. Zero's box spans all three rows, which is
+	//    why it is the one straight up that is not a single cell.
 	AddPosition(OutPositions, EHasardBetType::StraightUp, { 0 },
-		FVector2D(ZeroCenterX, ZeroCenterY), LOCTEXT("Zero", "0"));
+		FVector2D(ZeroCenterX, ZeroCenterY), LOCTEXT("Zero", "0"),
+		FVector2D(ZeroBoxWidth, NumberRows * CellSizeY));
 
 	for (int32 Column = 0; Column < NumberColumns; ++Column)
 	{
@@ -306,7 +309,8 @@ void UHasardTableLayout::BuildPositions(TArray<FHasardBetPosition>& OutPositions
 		{
 			const int32 Number = GetNumberAt(Column, Row);
 			AddPosition(OutPositions, EHasardBetType::StraightUp, { Number },
-				GetCellCenter(Column, Row), FText::AsNumber(Number));
+				GetCellCenter(Column, Row), FText::AsNumber(Number),
+				FVector2D(CellSizeX, CellSizeY));
 		}
 	}
 
@@ -423,7 +427,8 @@ void UHasardTableLayout::BuildPositions(TArray<FHasardBetPosition>& OutPositions
 		AddPosition(OutPositions, EHasardBetType::Column, Covered,
 			FVector2D(GridOrigin.X + NumberColumns * CellSizeX + OutsideBandDepth * 0.5f,
 				GetCellCenter(0, Row).Y),
-			FText::Format(LOCTEXT("ColumnFmt", "Column {0}"), FText::AsNumber(Row + 1)));
+			FText::Format(LOCTEXT("ColumnFmt", "Column {0}"), FText::AsNumber(Row + 1)),
+			FVector2D(OutsideBandDepth, CellSizeY));
 	}
 
 	// 11. Dozens. Four grid columns each, in the band on the near side.
@@ -435,10 +440,16 @@ void UHasardTableLayout::BuildPositions(TArray<FHasardBetPosition>& OutPositions
 			Covered.Add(Number);
 		}
 
+		// "1st 12" rather than "Dozen 1": it is what a real felt prints, and unlike the
+		// column boxes it still names which dozen, so the log and the readout keep working.
+		static const FText DozenNames[3] = {
+			LOCTEXT("Dozen1", "1st 12"), LOCTEXT("Dozen2", "2nd 12"), LOCTEXT("Dozen3", "3rd 12") };
+
 		AddPosition(OutPositions, EHasardBetType::Dozen, Covered,
 			FVector2D(GridOrigin.X + (Dozen * 4 + 2) * CellSizeX,
 				GridOrigin.Y - OutsideBandDepth * 0.5f),
-			FText::Format(LOCTEXT("DozenFmt", "Dozen {0}"), FText::AsNumber(Dozen + 1)));
+			DozenNames[Dozen],
+			FVector2D(4 * CellSizeX, OutsideBandDepth));
 	}
 
 	// 12. The six even-money bets, in the band beyond the dozens.
@@ -467,7 +478,8 @@ void UHasardTableLayout::BuildPositions(TArray<FHasardBetPosition>& OutPositions
 	{
 		AddPosition(OutPositions, EvenMoneyTypes[Index], EvenMoneySets[Index],
 			FVector2D(GridOrigin.X + (Index + 0.5f) * EvenMoneySpan, EvenMoneyY),
-			EvenMoneyNames[Index]);
+			EvenMoneyNames[Index],
+			FVector2D(EvenMoneySpan, OutsideBandDepth));
 	}
 }
 

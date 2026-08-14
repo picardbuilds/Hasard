@@ -99,9 +99,16 @@ public:
 #endif
 
 private:
-	/** Adds one position and stamps its PositionId from the array index. */
+	/**
+	 * Adds one position and stamps its PositionId from the array index.
+	 *
+	 * BoxSize defaults to zero because most positions have none: 83 of the 157 are lines
+	 * and corners. Omitting the argument is therefore the common case and says the right
+	 * thing, rather than making every line bet pass a zero it does not care about.
+	 */
 	void AddPosition(TArray<FHasardBetPosition>& OutPositions, EHasardBetType BetType,
-		const TArray<int32>& Covered, const FVector2D& ChipLocation, const FText& DisplayName) const;
+		const TArray<int32>& Covered, const FVector2D& ChipLocation, const FText& DisplayName,
+		const FVector2D& BoxSize = FVector2D::ZeroVector) const;
 
 	/** Finds a generated position by type and covered set. Used only by ResolvePosition. */
 	int32 FindPositionId(EHasardBetType BetType, const TArray<int32>& Covered) const;

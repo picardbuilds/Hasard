@@ -79,7 +79,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 	{
 		// Refuse to guess. Paying from a literal is the thing this module removes.
 		UE_LOG(LogHasard, Error, TEXT("SettleRound: no payout table, paying nobody"));
-		ActiveBets.Empty();
+		DropAllBets();
 		return;
 	}
 
@@ -87,7 +87,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 	{
 		// Without the layout a stored id means nothing, so no bet can be evaluated.
 		UE_LOG(LogHasard, Error, TEXT("SettleRound: no table layout, paying nobody"));
-		ActiveBets.Empty();
+		DropAllBets();
 		return;
 	}
 
@@ -98,7 +98,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 		// The same refusal as the missing table. A summary line reporting money
 		// returned when nothing was credited is worse than no summary at all.
 		UE_LOG(LogHasard, Error, TEXT("SettleRound: no bankroll, paying nobody"));
-		ActiveBets.Empty();
+		DropAllBets();
 		return;
 	}
 
@@ -137,7 +137,7 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 		Returned += Payout;
 	}
 
-	ActiveBets.Empty();
+	DropAllBets();
 
 	UE_LOG(LogHasard, Warning, TEXT("SettleRound on %d: %d placed, %d won, %d returned"),
 		WinningPocket, Placed, Won, Returned);
@@ -145,8 +145,18 @@ void UHasardBettingComponent::SettleRound(int32 WinningPocket,
 
 void UHasardBettingComponent::ClearAllBets()
 {
-	ActiveBets.Empty();
+	DropAllBets();
 	UE_LOG(LogHasard, Warning, TEXT("ClearAllBets"));
+}
+
+void UHasardBettingComponent::DropAllBets()
+{
+	ActiveBets.Empty();
+
+	// Broadcast from the one place the array is emptied. SettleRound has four exits -
+	// three refusals and the paying one - and a listener that missed any of them would
+	// leave chips sitting on a felt with no bets behind them.
+	OnBetsCleared.Broadcast();
 }
 
 int32 UHasardBettingComponent::GetTotalStaked() const

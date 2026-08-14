@@ -2,14 +2,20 @@
 
 #include "HasardFelt.h"
 #include "HasardBettingComponent.h"
+#include "HasardChip.h"
 #include "HasardTableLayout.h"
 #include "HasardTypes.h"
 #include "Components/BoxComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 
 /**
  * Which bets get their name printed on the felt.
@@ -49,6 +55,21 @@ static bool IsNamedOnFelt(EHasardBetType BetType)
 	return false;
 }
 
+/**
+ * The zero pocket's own straight up.
+ *
+ * Asked of the covered numbers rather than the position id, because the id is an index
+ * into a generated array and "zero happens to be built first" is not a fact worth
+ * depending on. What makes this position zero is that it covers pocket zero and nothing
+ * else, which stays true however BuildPositions is reordered.
+ */
+static bool IsZeroPosition(const FHasardBetPosition& Position)
+{
+	return Position.BetType == EHasardBetType::StraightUp
+		&& Position.CoveredNumbers.Num() == 1
+		&& Position.CoveredNumbers[0] == 0;
+}
+
 AHasardFelt::AHasardFelt()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -63,6 +84,38 @@ AHasardFelt::AHasardFelt()
 	Surface->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Surface->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Surface->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+	Cloth = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cloth"));
+	Cloth->SetupAttachment(Root);
+
+	Lines = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Lines"));
+	Lines->SetupAttachment(Root);
+
+	RedBoxes = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("RedBoxes"));
+	RedBoxes->SetupAttachment(Root);
+
+	BlackBoxes = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("BlackBoxes"));
+	BlackBoxes->SetupAttachment(Root);
+
+	GreenBoxes = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("GreenBoxes"));
+	GreenBoxes->SetupAttachment(Root);
+
+	ZeroBox = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ZeroBox"));
+	ZeroBox->SetupAttachment(Root);
+
+	// Every printed surface is scenery, and Surface above is the only thing the trace may
+	// hit. A quad that blocked Visibility would be found instead of the box underneath it,
+	// and every click on the felt would resolve against the wrong actor - the same failure
+	// the chips avoid, arriving from the other direction.
+	UStaticMeshComponent* const Printed[] = {
+		Cloth, ZeroBox, Lines, RedBoxes, BlackBoxes, GreenBoxes };
+
+	for (UStaticMeshComponent* Component : Printed)
+	{
+		Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Component->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Component->SetCastShadow(false);
+	}
 }
 
 void AHasardFelt::OnConstruction(const FTransform& Transform)
@@ -86,16 +139,36 @@ void AHasardFelt::BeginPlay()
 
 	SyncBoxToLayout();
 
+	// Surface before labels: both read the same positions, and printing the boxes first
+	// means a numeral is never briefly visible over bare cloth.
+	BuildSurface();
+
 	BuildLabels();
 
+	const AHasardChip* Chip = GetChipDefault();
+
 	const int32 Count = TableLayout->GetPositions().Num();
-	UE_LOG(LogHasard, Warning, TEXT("Felt: %d positions, %d labels, stake %d per click"),
-		Count, Labels.Num(), StakePerClick);
+	UE_LOG(LogHasard, Warning, TEXT("Felt: %d positions, %d labels, %d per click"),
+		Count, Labels.Num(), Chip ? Chip->GetChipValue() : 0);
 
 	if (bDrawDebugLayout)
 	{
 		DrawDebugLayout();
 	}
+}
+
+void AHasardFelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Unbind before the component goes. RemoveAll on a weak pointer that has already
+	// gone is a no-op, which is the whole reason it is weak.
+	if (UHasardBettingComponent* Betting = BoundBetting.Get())
+	{
+		Betting->OnBetsCleared.RemoveAll(this);
+	}
+
+	ClearChips();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AHasardFelt::SyncBoxToLayout()
@@ -147,6 +220,20 @@ void AHasardFelt::OnPlayerInteract_Implementation(APawn* InstigatorPawn,
 		return;
 	}
 
+	// Bound here rather than in BeginPlay: the component lives on the pawn, and the
+	// pawn is not reliably around when the felt starts. The first bet is the first
+	// moment it certainly is.
+	if (BoundBetting.Get() != Betting)
+	{
+		if (UHasardBettingComponent* Previous = BoundBetting.Get())
+		{
+			Previous->OnBetsCleared.RemoveAll(this);
+		}
+
+		Betting->OnBetsCleared.AddUObject(this, &AHasardFelt::HandleBetsCleared);
+		BoundBetting = Betting;
+	}
+
 	const FVector2D Local = WorldToFeltLocal(HitLocation);
 	const int32 PositionId = TableLayout->ResolvePosition(Local);
 
@@ -169,19 +256,86 @@ void AHasardFelt::OnPlayerInteract_Implementation(APawn* InstigatorPawn,
 	UE_LOG(LogHasard, Warning, TEXT("Felt: (%.1f, %.1f) -> id %d, %s"),
 		Local.X, Local.Y, PositionId, *Position->DisplayName.ToString());
 
-	if (!Betting->PlaceBet(PositionId, StakePerClick))
+	const AHasardChip* Chip = GetChipDefault();
+	if (!Chip)
+	{
+		// No chip class means no stake, because the chip is where the stake lives.
+		// Refusing here is the only way to avoid inventing a number.
+		UE_LOG(LogHasard, Error, TEXT("Felt: no chip class on BP_Felt, so a click has no stake"));
+		return;
+	}
+
+	if (!Betting->PlaceBet(PositionId, Chip->GetChipValue()))
 	{
 		// Refused, so no stake was taken. Nothing may be drawn as though one was.
 		return;
 	}
 
-	// Where the chip actually went, not where the player clicked. If these two are ever
-	// far apart the resolver picked a neighbor, and seeing it is how you notice.
-	if (const UWorld* World = GetWorld())
+	// The debug sphere that used to mark this spot is gone: a real chip lands here now,
+	// and two markers for one event is one of them lying eventually.
+	SpawnChip(*Position);
+}
+
+const AHasardChip* AHasardFelt::GetChipDefault() const
+{
+	return ChipClass ? ChipClass->GetDefaultObject<AHasardChip>() : nullptr;
+}
+
+void AHasardFelt::SpawnChip(const FHasardBetPosition& Position)
+{
+	UWorld* World = GetWorld();
+	const AHasardChip* Default = GetChipDefault();
+
+	if (!World || !Default)
 	{
-		DrawDebugSphere(World, FeltLocalToWorld(Position->ChipLocation),
-			2.0f, 8, FColor::Yellow, false, 4.0f);
+		return;
 	}
+
+	int32& Count = StackCounts.FindOrAdd(Position.PositionId);
+
+	// Height from the class default, not from the mesh: the felt asks the chip how tall
+	// a chip is and does not look at how it was built.
+	const float ChipHeight = Default->GetChipHeight();
+
+	// Half a chip up for the first one, so the disc rests on the felt rather than half
+	// sunk into it. Up vector rather than +Z, so a tilted table still stacks upwards.
+	const FVector Base = FeltLocalToWorld(Position.ChipLocation);
+	const FVector Lift = GetActorUpVector() * ((Count + 0.5f) * ChipHeight);
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+
+	if (AHasardChip* Chip = World->SpawnActor<AHasardChip>(
+		ChipClass, Base + Lift, GetActorRotation(), Params))
+	{
+		Chips.Add(Chip);
+		++Count;
+	}
+}
+
+void AHasardFelt::ClearChips()
+{
+	for (const TObjectPtr<AHasardChip>& Chip : Chips)
+	{
+		if (Chip)
+		{
+			Chip->Destroy();
+		}
+	}
+
+	Chips.Reset();
+
+	// The counts go too. Keeping them would stack the next round's first chip on top of
+	// a pile that is no longer there.
+	StackCounts.Reset();
+}
+
+void AHasardFelt::HandleBetsCleared()
+{
+	const int32 Removed = Chips.Num();
+	ClearChips();
+
+	UE_LOG(LogHasard, Warning, TEXT("Felt: cleared %d chips"), Removed);
 }
 
 void AHasardFelt::DrawFelt()
@@ -205,6 +359,18 @@ void AHasardFelt::RebuildLabels()
 
 	BuildLabels();
 	UE_LOG(LogHasard, Warning, TEXT("Felt: built %d labels"), Labels.Num());
+}
+
+void AHasardFelt::RebuildSurface()
+{
+	if (!TableLayout)
+	{
+		UE_LOG(LogHasard, Error, TEXT("Felt: no table layout on BP_Felt"));
+		return;
+	}
+
+	SyncBoxToLayout();
+	BuildSurface();
 }
 
 void AHasardFelt::BuildLabels()
@@ -243,35 +409,171 @@ void AHasardFelt::BuildLabels()
 		Label->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
 		Label->SetRelativeLocation(
 			FVector(Position.ChipLocation.X, Position.ChipLocation.Y, LabelZOffset));
-		Label->SetRelativeRotation(LabelRotation);
-		Label->SetText(Position.DisplayName);
+		Label->SetRelativeRotation(LabelRotationFor(Position));
+		Label->SetText(LabelTextFor(Position));
 		Label->SetWorldSize(LabelTextSize);
 		Label->SetHorizontalAlignment(EHTA_Center);
 		Label->SetVerticalAlignment(EVRTA_TextCenter);
-		Label->SetTextRenderColor(LabelColorFor(Position, *TableLayout));
+		Label->SetTextRenderColor(NumeralColor);
 		Labels.Add(Label);
 	}
 }
 
-FColor AHasardFelt::LabelColorFor(const FHasardBetPosition& Position,
-	const UHasardTableLayout& Layout) const
+FTransform AHasardFelt::BoxTransform(const FVector2D& Center, const FVector2D& Size,
+	float Height) const
 {
-	if (Position.BetType != EHasardBetType::StraightUp)
+	// BoxMesh is a unit quad measured in centimeters, so the scale is the size in
+	// centimeters over the mesh's own. Read from the asset rather than assuming 100:
+	// swapping in a differently sized plane should change nothing the player sees.
+	const FVector MeshSize = BoxMesh ? BoxMesh->GetBounds().BoxExtent * 2.0f : FVector::OneVector;
+	const float MeshX = FMath::IsNearlyZero(MeshSize.X) ? 1.0f : MeshSize.X;
+	const float MeshY = FMath::IsNearlyZero(MeshSize.Y) ? 1.0f : MeshSize.Y;
+
+	return FTransform(
+		FRotator::ZeroRotator,
+		FVector(Center.X, Center.Y, Height),
+		FVector(Size.X / MeshX, Size.Y / MeshY, 1.0f));
+}
+
+UMaterialInstanceDynamic* AHasardFelt::PrepareSurface(UStaticMeshComponent* Component,
+	const FColor& Color) const
+{
+	if (!Component || !BoxMesh || !SurfaceMaterial)
 	{
-		return OutsideLabelColor;
+		return nullptr;
 	}
 
-	// A straight up covers exactly one pocket. Reading past that would be reading a
-	// position this function was not given.
+	Component->SetStaticMesh(BoxMesh);
+
+	UMaterialInstanceDynamic* Instance = Component->CreateDynamicMaterialInstance(0, SurfaceMaterial);
+	if (Instance && !ColorParameterName.IsNone())
+	{
+		// FromColor, not the FLinearColor constructor: these are authored as sRGB in the
+		// details panel, and treating those bytes as linear washes every one of them out.
+		Instance->SetVectorParameterValue(ColorParameterName, FLinearColor::FromSRGBColor(Color));
+	}
+
+	return Instance;
+}
+
+void AHasardFelt::BuildSurface()
+{
+	// Clear first, unconditionally. BeginPlay and the button can both land here, and a
+	// pass that only added would stack a second felt on the first.
+	Lines->ClearInstances();
+	RedBoxes->ClearInstances();
+	BlackBoxes->ClearInstances();
+	GreenBoxes->ClearInstances();
+
+	UStaticMeshComponent* const Surfaces[] = {
+		Cloth, ZeroBox, Lines, RedBoxes, BlackBoxes, GreenBoxes };
+
+	for (UStaticMeshComponent* Component : Surfaces)
+	{
+		Component->SetVisibility(bShowSurface);
+	}
+
+	if (!TableLayout || !bShowSurface)
+	{
+		return;
+	}
+
+	if (!BoxMesh || !SurfaceMaterial)
+	{
+		// Loud, because the alternative is an invisible felt that still takes bets - the
+		// table would look broken while the money kept moving.
+		UE_LOG(LogHasard, Error,
+			TEXT("Felt: BP_Felt needs both Box Mesh and Surface Material to print itself"));
+		return;
+	}
+
+	PrepareSurface(Cloth, ClothColor);
+	PrepareSurface(Lines, LineColor);
+	PrepareSurface(RedBoxes, RedBoxColor);
+	PrepareSurface(BlackBoxes, BlackBoxColor);
+	PrepareSurface(GreenBoxes, OutsideBoxColor);
+	PrepareSurface(ZeroBox, ZeroBoxColor);
+
+	FVector2D Min, Max;
+	TableLayout->GetFeltBounds(Min, Max);
+
+	const FVector2D ClothSize = (Max - Min) + FVector2D(ClothMargin * 2.0f, ClothMargin * 2.0f);
+	Cloth->SetRelativeTransform(BoxTransform((Max + Min) * 0.5f, ClothSize, 0.0f));
+
+	int32 Printed = 0;
+
+	for (const FHasardBetPosition& Position : TableLayout->GetPositions())
+	{
+		// The 83 line bets sit on boundaries and own no area. This is the same test the
+		// layout answered when it generated them, asked once rather than restated here.
+		if (Position.BoxSize.IsNearlyZero())
+		{
+			continue;
+		}
+
+		// Full size on the plate, inset on the color. The difference is the printed line,
+		// so a box smaller than two borders would invert - clamp rather than let it.
+		const FVector2D Inset(
+			FMath::Max(Position.BoxSize.X - BorderWidth * 2.0f, 0.0f),
+			FMath::Max(Position.BoxSize.Y - BorderWidth * 2.0f, 0.0f));
+
+		Lines->AddInstance(
+			BoxTransform(Position.ChipLocation, Position.BoxSize, SurfaceZStep));
+
+		const FTransform Face =
+			BoxTransform(Position.ChipLocation, Inset, SurfaceZStep * 2.0f);
+
+		if (IsZeroPosition(Position))
+		{
+			ZeroBox->SetRelativeTransform(Face);
+		}
+		else
+		{
+			BoxesFor(Position, *TableLayout)->AddInstance(Face);
+		}
+
+		++Printed;
+	}
+
+	UE_LOG(LogHasard, Warning, TEXT("Felt: printed %d boxes - %d red, %d black, %d outside"),
+		Printed, RedBoxes->GetInstanceCount(), BlackBoxes->GetInstanceCount(),
+		GreenBoxes->GetInstanceCount());
+}
+
+UInstancedStaticMeshComponent* AHasardFelt::BoxesFor(const FHasardBetPosition& Position,
+	const UHasardTableLayout& Layout) const
+{
+	// An outside bet covers many pockets of both colors, so it has no color of its own
+	// and takes the cloth's. Only a straight up is one pocket, and only one pocket has
+	// a color to state. Zero never reaches here - BuildSurface routes it out first.
+	if (Position.BetType != EHasardBetType::StraightUp)
+	{
+		return GreenBoxes;
+	}
+
 	const int32 Number = Position.CoveredNumbers.Num() == 1
 		? Position.CoveredNumbers[0] : INDEX_NONE;
 
-	if (Number == 0)
+	return Layout.IsRedNumber(Number) ? RedBoxes : BlackBoxes;
+}
+
+FText AHasardFelt::LabelTextFor(const FHasardBetPosition& Position) const
+{
+	if (Position.BetType == EHasardBetType::Column)
 	{
-		return ZeroLabelColor;
+		// All three boxes print the same thing on a real layout, which is why the name
+		// stays on the position: the log and the readout still have to say which column.
+		return NSLOCTEXT("Hasard", "ColumnPays", "2 to 1");
 	}
 
-	return Layout.IsRedNumber(Number) ? RedNumberColor : BlackNumberColor;
+	return Position.DisplayName;
+}
+
+FRotator AHasardFelt::LabelRotationFor(const FHasardBetPosition& Position) const
+{
+	// The column boxes are the only positions past the end of the grid, so they are the
+	// only ones a player reads from that end. Everything else reads from the long side.
+	return Position.BetType == EHasardBetType::Column ? LabelRotationTurned : LabelRotation;
 }
 
 void AHasardFelt::DrawDebugLayout() const

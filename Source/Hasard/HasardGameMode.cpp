@@ -235,6 +235,66 @@ void AHasardGameMode::HasardAuditLayout()
 		}
 	}
 
+	// The printed felt is generated from BoxSize, so a layout that overlaps two boxes
+	// draws one over the other and looks merely odd. The same numbers feed ResolvePosition,
+	// which means the odd-looking cell is also the cell whose clicks land somewhere else -
+	// and that failure is silent. Checked here rather than in the felt because it is a
+	// property of the layout asset, true or false before anything is drawn.
+	FVector2D FeltMin, FeltMax;
+	TableLayout->GetFeltBounds(FeltMin, FeltMax);
+
+	// Neighboring boxes share an edge exactly. Shrink both sides of every comparison so
+	// touching is not reported as overlapping - only a real intersection is.
+	const float Shrink = 0.01f;
+	int32 Boxes = 0;
+	int32 BoxOffenders = 0;
+
+	for (const FHasardBetPosition& Position : Positions)
+	{
+		if (Position.BoxSize.IsNearlyZero())
+		{
+			continue;
+		}
+
+		++Boxes;
+
+		const FVector2D Min = Position.ChipLocation - Position.BoxSize * 0.5f;
+		const FVector2D Max = Position.ChipLocation + Position.BoxSize * 0.5f;
+
+		if (Min.X < FeltMin.X - Shrink || Min.Y < FeltMin.Y - Shrink
+			|| Max.X > FeltMax.X + Shrink || Max.Y > FeltMax.Y + Shrink)
+		{
+			UE_LOG(LogHasard, Error,
+				TEXT("Position %d (%s): box runs outside the felt bounds"),
+				Position.PositionId, *Position.DisplayName.ToString());
+			++BoxOffenders;
+		}
+
+		for (const FHasardBetPosition& Other : Positions)
+		{
+			// Ids ascend with the array, so the pair is only ever tested once.
+			if (Other.PositionId <= Position.PositionId || Other.BoxSize.IsNearlyZero())
+			{
+				continue;
+			}
+
+			const FVector2D OtherMin = Other.ChipLocation - Other.BoxSize * 0.5f;
+			const FVector2D OtherMax = Other.ChipLocation + Other.BoxSize * 0.5f;
+
+			const bool bOverlaps =
+				Min.X < OtherMax.X - Shrink && Max.X > OtherMin.X + Shrink &&
+				Min.Y < OtherMax.Y - Shrink && Max.Y > OtherMin.Y + Shrink;
+
+			if (bOverlaps)
+			{
+				UE_LOG(LogHasard, Error, TEXT("Positions %d (%s) and %d (%s): boxes overlap"),
+					Position.PositionId, *Position.DisplayName.ToString(),
+					Other.PositionId, *Other.DisplayName.ToString());
+				++BoxOffenders;
+			}
+		}
+	}
+
 	for (const TPair<EHasardBetType, int32>& Pair : CountByType)
 	{
 		UE_LOG(LogHasard, Display, TEXT("%s: %d positions"),
@@ -243,4 +303,7 @@ void AHasardGameMode::HasardAuditLayout()
 
 	UE_LOG(LogHasard, Display, TEXT("%d positions generated, %d failing the edge check"),
 		Positions.Num(), Offenders);
+
+	UE_LOG(LogHasard, Display, TEXT("%d of them are printed boxes, %d failing the box check"),
+		Boxes, BoxOffenders);
 }

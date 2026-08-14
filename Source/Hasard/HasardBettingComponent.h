@@ -10,6 +10,9 @@
 class UHasardPayoutTable;
 class UHasardTableLayout;
 
+/** Fired whenever the round's bets are dropped, by settlement or by ClearAllBets. */
+DECLARE_MULTICAST_DELEGATE(FOnBetsCleared);
+
 UCLASS(ClassGroup=(Hasard), meta=(BlueprintSpawnableComponent))
 class HASARD_API UHasardBettingComponent : public UActorComponent
 {
@@ -17,6 +20,15 @@ class HASARD_API UHasardBettingComponent : public UActorComponent
 
 public:
 	UHasardBettingComponent();
+
+	/**
+	 * Broadcast when ActiveBets is emptied, whichever way it emptied.
+	 *
+	 * The felt listens so it can destroy its chips. Deliberately not a dynamic
+	 * delegate: the only listener is C++, and exposing it to Blueprint would let chip
+	 * lifetime be unhooked in an asset with nothing in the code to show for it.
+	 */
+	FOnBetsCleared OnBetsCleared;
 
 	/**
 	 * Records a bet on one generated position. Returns false if the stake is not
@@ -47,6 +59,9 @@ public:
 	int32 GetTotalStaked() const;
 
 private:
+	/** Empties the round and tells anyone watching. Every exit path goes through here. */
+	void DropAllBets();
+
 	/** UPROPERTY so the array serializes and Blueprint can read it. */
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Betting",
 		meta = (AllowPrivateAccess = "true"))

@@ -58,6 +58,21 @@ struct FHasardBetPosition
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
 	FVector2D ChipLocation = FVector2D::ZeroVector;
 
+	/**
+	 * The rectangle this position is printed as, centered on ChipLocation, in centimeters.
+	 *
+	 * Zero for the 83 line bets, and that is the test rather than a separate flag: a split
+	 * sits on a boundary and a corner on an intersection, so neither owns any area to print.
+	 * "Has a box" and "is drawn" are therefore the same question, asked of one field.
+	 *
+	 * Generated here rather than derived in the felt. A felt that computed its own
+	 * rectangles from CellSizeX would be a second copy of the layout arithmetic, which is
+	 * the thing ChipLocation exists to avoid - and a picture that disagrees with the hit
+	 * test is worse than no picture, because it looks authoritative.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
+	FVector2D BoxSize = FVector2D::ZeroVector;
+
 	/** What the hover readout shows the player. FText because a player reads it. */
 	UPROPERTY(BlueprintReadOnly, Category = "Hasard|Layout")
 	FText DisplayName;
