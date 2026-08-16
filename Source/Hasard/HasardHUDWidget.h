@@ -48,6 +48,12 @@ public:
 	/** Rows disagree, so no single figure is true. Say that rather than quoting one. */
 	void SetHouseEdgeUnknown();
 
+	/** The bet under the aim, priced. Written every time the aim moves to a new position. */
+	void SetBetPreview(const FText& InPreviewText);
+
+	/** No bet under the aim. Blank, never the last price. */
+	void ClearBetPreview();
+
 private:
 	/** Each name must match a Text Block of that name in WBP_HUD, or the Blueprint refuses to compile. */
 	UPROPERTY(meta = (BindWidget))
@@ -64,4 +70,7 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> OddsText;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> PreviewText;
 };

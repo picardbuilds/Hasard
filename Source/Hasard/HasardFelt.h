@@ -8,8 +8,10 @@
 #include "HasardFelt.generated.h"
 
 class AHasardChip;
+class AHasardPlayerController;
 class UBoxComponent;
 class UHasardBettingComponent;
+class UHasardPayoutTable;
 class UHasardTableLayout;
 class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
@@ -38,6 +40,11 @@ public:
 
 	virtual void OnPlayerInteract_Implementation(APawn* InstigatorPawn,
 		const FVector& HitLocation) override;
+
+	virtual void OnPlayerHover_Implementation(APawn* InstigatorPawn,
+		const FVector& HitLocation) override;
+
+	virtual void OnPlayerEndHover_Implementation(APawn* InstigatorPawn) override;
 
 	/** Redraws the debug overlay. A details-panel button: an actor gets no exec routing. */
 	UFUNCTION(CallInEditor, Category = "Hasard|Felt")
@@ -81,9 +88,11 @@ private:
 	/**
 	 * Prints the whole felt: cloth, then a white plate per box, then the color inset on it.
 	 *
-	 * Called from BeginPlay and from the button, never from OnConstruction. It creates
-	 * material instances, and OnConstruction runs on every property edit - one dynamic
-	 * instance per nudge of a color slider is churn with nothing to show for it.
+	 * Called from OnConstruction as well as BeginPlay, and it has to be. An instanced
+	 * component builds its render state when it registers, and one registered without a
+	 * mesh does not pick up a mesh or a material assigned later - the values are stored
+	 * and the renderer keeps drawing the default. The cost is a dynamic material instance
+	 * per property edit in the editor, which is churn worth paying to have the felt draw.
 	 */
 	void BuildSurface();
 
@@ -128,6 +137,26 @@ private:
 	/** The chip a click would place, or null. Its value is what a click costs. */
 	const AHasardChip* GetChipDefault() const;
 
+	/**
+	 * Puts the ghost chip on a position and names its price on the HUD. Safe to call
+	 * every frame with the same position: it only rebuilds the text when the position
+	 * actually changed.
+	 */
+	void ShowPreview(APawn* InstigatorPawn, const FHasardBetPosition& Position);
+
+	/** Hides both. Every path that stops previewing goes through here. */
+	void HidePreview();
+
+	/**
+	 * What the readout says: the bet, what it costs, and what it returns if it wins.
+	 *
+	 * The return is computed with the same expression settlement uses,
+	 * Stake * (PayoutRatio + 1), rather than a second one that means the same thing.
+	 * A readout that promised a different number than the bankroll pays would be a lie
+	 * told at exactly the moment the player is deciding.
+	 */
+	FText ReadoutTextFor(const FHasardBetPosition& Position, const AHasardChip& Chip) const;
+
 	/** Fixed origin. Everything else is measured and offset from here. */
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Felt")
 	TObjectPtr<USceneComponent> Root;
@@ -153,7 +182,7 @@ private:
 	/**
 	 * The colored faces, split by color rather than by bet type.
 	 *
-	 * Three components and about 120 instances for the whole felt, against one component
+	 * Three components and 48 instances for the whole felt, against one component
 	 * per box. That is a draw-call decision made now because it is nearly free now: at
 	 * VR framerates the same table has to render twice per frame, and sixty-odd separate
 	 * primitives is the kind of thing that is painful to unpick after the fact.
@@ -185,6 +214,19 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Felt",
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHasardTableLayout> TableLayout;
+
+	/**
+	 * The same payout asset the GameMode settles with. Read only to state what a bet
+	 * pays before it is placed.
+	 *
+	 * The felt does not pay anyone and must never start. It holds this so the player can
+	 * be told the price of a bet while they can still decline it - which is the whole
+	 * reason this module exists, and the reason a ghost chip on its own would have been
+	 * the wrong feature.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Felt",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHasardPayoutTable> PayoutTable;
 
 	/**
 	 * Draws the grid and all 157 chip locations on BeginPlay. Debug builds only.
@@ -235,6 +277,36 @@ private:
 	 */
 	TWeakObjectPtr<UHasardBettingComponent> BoundBetting;
 
+	/**
+	 * The controller the readout is written through. Weak for the same reason as
+	 * BoundBetting: the pawn can be torn down before the felt, and HidePreview still
+	 * has to be able to clear the line.
+	 */
+	TWeakObjectPtr<AHasardPlayerController> BoundController;
+
+	/**
+	 * The ghost chip under the aim. Spawned once and moved, never once bet with.
+	 *
+	 * It is an AHasardChip of the same ChipClass a click would place, so its size,
+	 * height and color are the real thing by construction rather than by being kept
+	 * in step. Only its material differs.
+	 */
+	UPROPERTY()
+	TObjectPtr<AHasardChip> PreviewChip;
+
+	/** Which position the preview is showing, or INDEX_NONE when it is hidden. */
+	int32 PreviewPositionId = INDEX_NONE;
+
+	/**
+	 * The see-through material the ghost chip wears. Assigned on BP_Felt.
+	 *
+	 * Without one the preview is a solid chip indistinguishable from a placed bet, so
+	 * the felt refuses to preview at all rather than show a chip that looks paid for.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Preview",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMaterialInterface> PreviewMaterial;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Labels",
 		meta = (AllowPrivateAccess = "true"))
 	bool bShowLabels = true;
@@ -267,7 +339,7 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Labels",
 		meta = (AllowPrivateAccess = "true"))
-	FRotator LabelRotationTurned = FRotator(90.0f, 90.0f, 0.0f);
+	FRotator LabelRotationTurned = FRotator(90.0f, 270.0f, 0.0f);
 
 	/**
 	 * One ink for every numeral and every word on the felt.

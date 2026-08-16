@@ -61,7 +61,7 @@ struct FHasardBetPosition
 	/**
 	 * The rectangle this position is printed as, centered on ChipLocation, in centimeters.
 	 *
-	 * Zero for the 83 line bets, and that is the test rather than a separate flag: a split
+	 * Zero for the 108 line bets, and that is the test rather than a separate flag: a split
 	 * sits on a boundary and a corner on an intersection, so neither owns any area to print.
 	 * "Has a box" and "is drawn" are therefore the same question, asked of one field.
 	 *
@@ -84,8 +84,10 @@ struct FHasardBetPosition
  * BetType and the covered numbers are not stored here. They belong to the position,
  * and duplicating them would let a bet disagree with the table it was placed on.
  * Settlement looks the position up by id, so an id that does not exist is a loud
- * error rather than a bet that quietly never wins. The stake is already taken by
- * then, which is why PlaceBet is where a bad id has to be refused.
+ * error rather than a bet that quietly never wins - but the stake is already taken
+ * by then. Ids come from ResolvePosition, which returns a generated id or
+ * INDEX_NONE and nothing else. PlaceBet refuses only INDEX_NONE, so an id
+ * synthesized anywhere else is the one route to a paid bet that cannot win.
  */
 USTRUCT(BlueprintType)
 struct FHasardBet

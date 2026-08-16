@@ -102,9 +102,9 @@ private:
 	/**
 	 * Adds one position and stamps its PositionId from the array index.
 	 *
-	 * BoxSize defaults to zero because most positions have none: 83 of the 157 are lines
-	 * and corners. Omitting the argument is therefore the common case and says the right
-	 * thing, rather than making every line bet pass a zero it does not care about.
+	 * BoxSize defaults to zero because most positions have none: 108 of the 157 sit on a
+	 * boundary or an intersection. Omitting the argument is therefore the common case and
+	 * says the right thing, rather than making every line bet pass a zero it does not care about.
 	 */
 	void AddPosition(TArray<FHasardBetPosition>& OutPositions, EHasardBetType BetType,
 		const TArray<int32>& Covered, const FVector2D& ChipLocation, const FText& DisplayName,

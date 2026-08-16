@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "HasardChip.generated.h"
 
+class UMaterialInterface;
 class UStaticMeshComponent;
 
 /**
@@ -42,6 +43,16 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Chip")
 	int32 GetChipValue() const { return ChipValue; }
+
+	/**
+	 * Repaints this chip with a see-through material, for use as an aim preview.
+	 *
+	 * Deliberately not a second Blueprint class. A BP_ChipPreview would carry its own
+	 * ChipValue and ChipHeight, and a preview that showed 5 while the real chip cost 10
+	 * is precisely the disagreement this class was built to make impossible. A preview
+	 * is the same denomination wearing a different material, and nothing else.
+	 */
+	void SetPreviewMaterial(UMaterialInterface* PreviewMaterial);
 
 private:
 	/** Pushes ChipColor into the mesh material. Called from OnConstruction, so the editor shows it. */

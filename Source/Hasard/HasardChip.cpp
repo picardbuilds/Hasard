@@ -3,6 +3,7 @@
 #include "HasardChip.h"
 #include "HasardTypes.h"
 #include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
 
 AHasardChip::AHasardChip()
 {
@@ -28,6 +29,22 @@ void AHasardChip::OnConstruction(const FTransform& Transform)
 
 	// Here rather than BeginPlay, so a denomination reads correctly in the editor and
 	// in the Blueprint preview rather than only once the game is running.
+	ApplyChipColor();
+}
+
+void AHasardChip::SetPreviewMaterial(UMaterialInterface* PreviewMaterial)
+{
+	if (!Mesh || !PreviewMaterial)
+	{
+		return;
+	}
+
+	Mesh->SetMaterial(0, PreviewMaterial);
+
+	// Re-apply, because the material just changed underneath it. SetMaterial discards
+	// the dynamic instance ChipColor was written into, so without this a preview would
+	// come out whatever color the preview material ships with - and a preview in the
+	// wrong denomination's color is worse than no preview.
 	ApplyChipColor();
 }
 

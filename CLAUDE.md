@@ -47,6 +47,48 @@ Anti-patterns, before adding gameplay features.** If a feature request conflicts
 with them, raise the conflict and get an explicit decision. Do not silently
 implement it, and do not quietly soften it until it fits.
 
+## Who writes the code
+
+**Joe types every line of C++ in `Source/`. Agents never edit it. There is no
+exception to this, including "just this once", "it is only a typo", and "you
+asked me to add the feature".**
+
+This is not a preference about workflow. It is what the project is for. Hasard is
+a portfolio piece for an internship, and its value is entirely in being able to
+sit across from an interviewer and explain why `SessionStartRealTime` is a
+`double`, why chips are actors and printed boxes are instances, why the felt has
+no line geometry. **Code that was not typed by hand is code that cannot be
+defended in that room**, and a repo full of it is worth less than half the size
+written slowly.
+
+Guide 2 and guide 3 exist because of this. They are build-along courses whose
+Build panels show **complete files** precisely so they can be typed rather than
+merged by eye. An agent that edits the source has skipped the deliverable and
+produced the byproduct.
+
+### What an agent produces instead
+
+| Asked for | The agent's output |
+|---|---|
+| A feature | A guide module, or a build panel, that Joe types. Nothing in `Source/` changes. |
+| A fix to existing code | The defect, a `diff` fence with the exact replacement, and the line numbers. Joe applies it. |
+| A review of pasted code | Defects only, per the `hasard-guide-authoring` skill. |
+| Docs, notes, decisions | Direct edits are fine - `docs/`, `CLAUDE.md`, `toUpdate.md` are not what is being learned. |
+
+If an agent needs working code to reason about - to check that an audit passes, to
+count boxes, to verify arithmetic - it writes a throwaway script **outside the
+repo**, in its own scratch directory. It does not edit `Source/` and revert.
+
+**Verifying a change is not a licence to make it.** The temptation is to edit the
+file, confirm it compiles or that the numbers work, and then hand over a diff. The
+edit is the violation regardless of what happens afterwards; if the working tree
+was touched, the line was crossed.
+
+If something genuinely cannot be expressed as a panel to type - it is too large, or
+it is a mechanical rename across forty files - **say so and ask.** Getting explicit
+permission takes one message. Assuming it is the failure this section exists to
+prevent.
+
 ## Repo layout
 
 The repo root **is** the Unreal project root. `Hasard.uproject` sits beside this
@@ -251,6 +293,13 @@ refusing them is the thing worth showing.
 
 ### Sessions
 
+- **Do not edit anything under `Source/`.** See Who writes the code. An agent that
+  has opened a `.h` or `.cpp` with a write tool has already got it wrong, whatever
+  the diff looks like afterwards.
+- Do not "helpfully" apply a fix you have just correctly identified. Report it with
+  a diff fence and stop. The report is the whole job.
+- Do not edit source to test a theory, intending to revert. Use a scratch copy
+  outside the repo.
 - Do not start writing C++ here before loading `ue5-code-review`, and do not start
   editing a guide before loading `ue5-guide-authoring`. See Skills above.
 - Do not ask permission to load them. Asking each time is the failure this rule
@@ -360,6 +409,28 @@ thousand tokens; the cost of loading them late is the work already being wrong.
 
 Written down here rather than left to habit because a fresh session has no memory of the
 previous one, and the previous one is where the reason lives.
+
+### 2026-08-14 - Agents do not write the C++; the rule is now in the brief
+Written down after an agent implemented guide 3 module 7 - `BoxSize`, the printed
+felt, the box audit - directly in `Source/` instead of authoring the module for Joe
+to type. Six files, and they landed in commit `d723d90` alongside hand-written
+module 6 work.
+
+Not reverted. The code is correct, the guide module was generated from it and
+verified, and unpicking a mixed commit costs more than it returns. The cost paid is
+that module 7 is the one module Joe did not type, and that is exactly the cost this
+entry exists to stop recurring.
+
+The failure was not malice or misunderstanding of the request - the request was
+"make the table look real", which sounds like a request for code. It is that
+nothing in this file said otherwise. The previous version told a session to read
+Epic's standard *before writing C++ here*, which reads as permission. **Who writes
+the code** now says the opposite, in the imperative, above the layout section, with
+a table of what an agent produces instead.
+
+Two smaller traps are named there because both are reasonable-sounding: editing a
+file to verify a change before handing over the diff, and applying a fix that was
+just correctly diagnosed. Both end with a modified working tree, which is the line.
 
 ### 2026-08-08 - Epic's standard is the authority over `docs/CONVENTIONS.md`
 `docs/epic-standard-audit.md` records where this repo and its own conventions diverge

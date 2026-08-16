@@ -44,6 +44,18 @@ void UHasardHUDWidget::SetHouseEdgeUnknown()
 		"House edge unavailable - the payout table is missing or inconsistent"));
 }
 
+void UHasardHUDWidget::SetBetPreview(const FText& InPreviewText)
+{
+	PreviewText->SetText(InPreviewText);
+}
+
+void UHasardHUDWidget::ClearBetPreview()
+{
+	// Blank rather than the last bet. A price left standing after the aim moved is a
+	// price for a bet the player is not making.
+	PreviewText->SetText(FText::GetEmpty());
+}
+
 void UHasardHUDWidget::NotifyRealityCheckDismissed()
 {
 	OnRealityCheckDismissed.Broadcast();

@@ -20,6 +20,15 @@ public:
 	/** Called by the PlayerState's reality-check timer. */
 	void HandleRealityCheck(int32 MinutesElapsed);
 
+	/**
+	 * Called by the felt as the aim enters and leaves a bet position.
+	 *
+	 * The felt does not reach the widget itself. Everything the HUD shows arrives
+	 * through here, so there is one object that decides what the player is told.
+	 */
+	void SetBetPreview(const FText& PreviewText);
+	void ClearBetPreview();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

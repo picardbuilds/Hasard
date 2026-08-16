@@ -121,8 +121,12 @@ void AHasardPlayerPawn::PlaceBet()
 		return;
 	}
 
+	// This frame's hover, not a fresh trace. The two would almost always agree, and the
+	// times they would not are the times it matters: a trace taken a frame after the one
+	// that drew the preview can resolve to the neighboring position, and the player
+	// would be charged for a bet other than the one they were looking at.
 	FHitResult Hit;
-	if (!InteractionComp->TraceForInteractable(Hit))
+	if (!InteractionComp->GetHoveredHit(Hit))
 	{
 		return;
 	}

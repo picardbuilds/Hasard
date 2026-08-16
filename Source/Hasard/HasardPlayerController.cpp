@@ -120,6 +120,22 @@ void AHasardPlayerController::UpdateSessionTime()
 	}
 }
 
+void AHasardPlayerController::SetBetPreview(const FText& PreviewText)
+{
+	if (HUDWidget)
+	{
+		HUDWidget->SetBetPreview(PreviewText);
+	}
+}
+
+void AHasardPlayerController::ClearBetPreview()
+{
+	if (HUDWidget)
+	{
+		HUDWidget->ClearBetPreview();
+	}
+}
+
 void AHasardPlayerController::HandleRealityCheck(int32 MinutesElapsed)
 {
 	if (!HUDWidget || !BoundBankroll)

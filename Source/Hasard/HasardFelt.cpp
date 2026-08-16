@@ -3,6 +3,8 @@
 #include "HasardFelt.h"
 #include "HasardBettingComponent.h"
 #include "HasardChip.h"
+#include "HasardPayoutTable.h"
+#include "HasardPlayerController.h"
 #include "HasardTableLayout.h"
 #include "HasardTypes.h"
 #include "Components/BoxComponent.h"
@@ -125,6 +127,13 @@ void AHasardFelt::OnConstruction(const FTransform& Transform)
 	// Resized here as well as in BeginPlay, so assigning the asset in the editor
 	// shows the right box immediately rather than after the next Play.
 	SyncBoxToLayout();
+
+	// And printed here too. BoxMesh and SurfaceMaterial are EditDefaultsOnly, so they do
+	// not exist until the Blueprint has written its defaults - which happens after the
+	// constructor and before this. Printing from BeginPlay instead left the instanced
+	// components registered with no mesh, and a material assigned to them afterwards was
+	// stored on the component but never reached the renderer: the felt drew WorldGridMaterial.
+	BuildSurface();
 }
 
 void AHasardFelt::BeginPlay()
@@ -144,6 +153,15 @@ void AHasardFelt::BeginPlay()
 	BuildSurface();
 
 	BuildLabels();
+
+	if (!PayoutTable)
+	{
+		// Not fatal - the ghost chip still shows where a bet would land. Loud anyway,
+		// because a preview that cannot say what a bet pays is the half of this feature
+		// that was worth building.
+		UE_LOG(LogHasard, Error,
+			TEXT("Felt: no payout table on BP_Felt - the readout cannot state a payout"));
+	}
 
 	const AHasardChip* Chip = GetChipDefault();
 
@@ -166,6 +184,7 @@ void AHasardFelt::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		Betting->OnBetsCleared.RemoveAll(this);
 	}
 
+	HidePreview();
 	ClearChips();
 
 	Super::EndPlay(EndPlayReason);
@@ -279,6 +298,134 @@ void AHasardFelt::OnPlayerInteract_Implementation(APawn* InstigatorPawn,
 const AHasardChip* AHasardFelt::GetChipDefault() const
 {
 	return ChipClass ? ChipClass->GetDefaultObject<AHasardChip>() : nullptr;
+}
+
+void AHasardFelt::OnPlayerHover_Implementation(APawn* InstigatorPawn,
+	const FVector& HitLocation)
+{
+	if (!TableLayout)
+	{
+		return;
+	}
+
+	// The same two calls OnPlayerInteract makes, on the same point, one frame earlier.
+	// That is the guarantee: the preview and the bet cannot resolve differently because
+	// they are the same question asked of the same resolver.
+	const FVector2D Local = WorldToFeltLocal(HitLocation);
+	const int32 PositionId = TableLayout->ResolvePosition(Local);
+	const FHasardBetPosition* Position = PositionId != INDEX_NONE
+		? TableLayout->GetPositionById(PositionId) : nullptr;
+
+	if (!Position)
+	{
+		// Aiming at the margin is not a bet, so it must not look like one.
+		HidePreview();
+		return;
+	}
+
+	ShowPreview(InstigatorPawn, *Position);
+}
+
+void AHasardFelt::OnPlayerEndHover_Implementation(APawn* InstigatorPawn)
+{
+	HidePreview();
+}
+
+void AHasardFelt::ShowPreview(APawn* InstigatorPawn, const FHasardBetPosition& Position)
+{
+	const AHasardChip* Default = GetChipDefault();
+	UWorld* World = GetWorld();
+
+	if (!World || !Default || !PreviewMaterial)
+	{
+		HidePreview();
+		return;
+	}
+
+	if (!PreviewChip)
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+
+		PreviewChip = World->SpawnActor<AHasardChip>(
+			ChipClass, FVector::ZeroVector, GetActorRotation(), Params);
+
+		if (!PreviewChip)
+		{
+			return;
+		}
+
+		// The material is the only thing separating this from a placed bet, so it is
+		// applied before the chip is ever made visible.
+		PreviewChip->SetPreviewMaterial(PreviewMaterial);
+	}
+
+	// On top of the stack that is already there, so the preview shows where this chip
+	// would land rather than where the first one did.
+	const int32* Count = StackCounts.Find(Position.PositionId);
+	const float Height = ((Count ? *Count : 0) + 0.5f) * Default->GetChipHeight();
+
+	PreviewChip->SetActorLocation(
+		FeltLocalToWorld(Position.ChipLocation) + GetActorUpVector() * Height);
+	PreviewChip->SetActorHiddenInGame(false);
+
+	BoundController = InstigatorPawn
+		? Cast<AHasardPlayerController>(InstigatorPawn->GetController()) : nullptr;
+
+	// Rebuilt only when the aim moves to a different position. This runs every frame,
+	// and formatting text sixty times a second to produce the same string is waste.
+	if (PreviewPositionId != Position.PositionId)
+	{
+		PreviewPositionId = Position.PositionId;
+
+		if (AHasardPlayerController* PC = BoundController.Get())
+		{
+			PC->SetBetPreview(ReadoutTextFor(Position, *Default));
+		}
+	}
+}
+
+void AHasardFelt::HidePreview()
+{
+	if (PreviewChip)
+	{
+		PreviewChip->SetActorHiddenInGame(true);
+	}
+
+	if (AHasardPlayerController* PC = BoundController.Get())
+	{
+		PC->ClearBetPreview();
+	}
+
+	PreviewPositionId = INDEX_NONE;
+}
+
+FText AHasardFelt::ReadoutTextFor(const FHasardBetPosition& Position,
+	const AHasardChip& Chip) const
+{
+	const int32 Stake = Chip.GetChipValue();
+
+	const FHasardPayoutRule* Rule = PayoutTable
+		? PayoutTable->FindRule(Position.BetType) : nullptr;
+
+	if (!Rule)
+	{
+		// Say so plainly. A bet with no rule is one settlement will take the stake for
+		// and never pay, so the player is owed the warning while they can still not make
+		// it - this is the DA_AmericanPayouts gap, made visible instead of silent.
+		return FText::Format(
+			NSLOCTEXT("Hasard", "ReadoutNoRule", "{0}  -  this table cannot pay this bet"),
+			Position.DisplayName);
+	}
+
+	// The same arithmetic SettleRound uses. TryStake already took the stake, so a 35:1
+	// winner returns 36 times it.
+	const int32 Returns = Stake * (Rule->PayoutRatio + 1);
+
+	return FText::Format(
+		NSLOCTEXT("Hasard", "ReadoutFmt", "{0}  -  stake {1}, returns {2}   ({3}:1)"),
+		Position.DisplayName, FText::AsNumber(Stake),
+		FText::AsNumber(Returns), FText::AsNumber(Rule->PayoutRatio));
 }
 
 void AHasardFelt::SpawnChip(const FHasardBetPosition& Position)
@@ -571,9 +718,10 @@ FText AHasardFelt::LabelTextFor(const FHasardBetPosition& Position) const
 
 FRotator AHasardFelt::LabelRotationFor(const FHasardBetPosition& Position) const
 {
-	// The column boxes are the only positions past the end of the grid, so they are the
-	// only ones a player reads from that end. Everything else reads from the long side.
-	return Position.BetType == EHasardBetType::Column ? LabelRotationTurned : LabelRotation;
+	// Only a straight up sits in a square box. Every outside bet - dozens, even money and
+	// the column boxes - is wider than it is deep, so its name runs along the long axis or
+	// it is printed across the narrow dimension and crowds both rules.
+	return Position.BetType == EHasardBetType::StraightUp ? LabelRotation : LabelRotationTurned;
 }
 
 void AHasardFelt::DrawDebugLayout() const

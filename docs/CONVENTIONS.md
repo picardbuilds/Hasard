@@ -141,12 +141,42 @@ Do all of a module in one pass. Each editor↔VS transition costs a close-build-
 Rules:
 
 - Touched a header? Full build with the **editor closed**. Live Coding won't do it.
+- **Turn Live Coding off.** Editor Preferences → General → Live Coding → untick *Enable Live
+  Coding*. With it on, a build either fails outright with `Unable to build while Live Coding
+  is active` (code 6), or the editor keeps running a patched process that ignores the DLL you
+  just built. The second failure is silent and cost most of a session on 2026-08-14. This
+  project edits headers nearly every module, which is exactly the case Live Coding cannot
+  handle, so the feature buys nothing here and hides the build state.
 - A class compiled while the editor is open is invisible to it — no error is reported anywhere.
 - `E####` errors come from IntelliSense; `C####` errors in the Output window come from MSVC. Only the second kind stops a build.
 - IntelliSense squiggles naming `GENERATED_BODY()`, `Super::`, `_Implementation` or `.generated.h` are noise — it cannot run UHT, so it reads a stale generated header. `E0135: AActor has no member SetupPlayerInputComponent` is this: `Super` has not resolved to `APawn` yet.
 - Plain C++ errors are real even from IntelliSense — `E0333` (defining an undeclared member), type mismatches, missing declarations. The prefix tells you who is speaking, not whether they are right; the tiebreaker is whether the symbol is macro-generated.
 - Squiggles persisting after a clean build: right-click `Hasard.uproject` → Generate Visual Studio project files, then reopen the solution.
 - A GameMode never set in Project Settings → Maps & Modes is a silent no-op that looks exactly like broken code.
+
+### When "Build: 1 succeeded" compiled nothing
+
+**A build that succeeds in a few seconds and changes nothing on screen did not compile your
+file.** UBT decides what to rebuild by comparing timestamps, and if the `.obj` under
+`Intermediate/Build/.../Hasard/` is newer than the `.cpp`, it skips it and reports success.
+Clock skew, a file copied in, or an editor that preserves timestamps on save is enough to
+cause it.
+
+The symptom is brutal because every signal says you are fine: the build succeeds, the DLL
+is rebuilt and freshly stamped, the source on disk is visibly correct, and the running game
+behaves as though the change was never made. Hours went into this on 2026-08-14, chasing a
+label rotation that was never in the binary.
+
+- **Suspect it when a rebuild changes nothing twice in a row.** Once is a mistake; twice is
+  the toolchain.
+- **Confirm it, do not infer it.** Put a `UE_LOG` in the function you changed. If it does not
+  print, the code is not running - that is the whole diagnosis, and it takes one Play.
+- **Fix it with Rebuild, not Build.** Right-click the `Hasard` project → **Rebuild**. It
+  ignores timestamps. If it finishes in six seconds it did nothing; a real rebuild takes
+  minutes.
+
+Timestamps are evidence about the build system, not about your code. The only proof that a
+line is in the binary is watching it execute.
 
 ---
 
