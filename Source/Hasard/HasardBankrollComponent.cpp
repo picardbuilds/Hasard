@@ -2,6 +2,7 @@
 
 
 #include "HasardBankrollComponent.h"
+#include "HasardSaveGame.h"
 
 UHasardBankrollComponent::UHasardBankrollComponent()
 {
@@ -12,9 +13,23 @@ void UHasardBankrollComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// What a first sitting looks like. The controller overwrites the balance from the
+	// save if the player continues, which happens before the start screen comes down.
 	Balance     = StartingBalance;
-	TotalStaked = 0;
-	TotalWon    = 0;
+	SessionStaked = 0;
+	SessionWon    = 0;
+}
+
+void UHasardBankrollComponent::ApplySave(const UHasardSaveGame& Save, bool bContinuePrevious)
+{
+	PriorStaked = Save.LifetimeStaked;
+	PriorWon = Save.LifetimeWon;
+
+	Balance = bContinuePrevious ? Save.Balance : StartingBalance;
+
+	// Delta of zero: nothing was staked or won, the figures were restored. The HUD needs
+	// the broadcast anyway, because it has been showing the defaults until now.
+	OnBankrollChanged.Broadcast(Balance, 0, GetSessionNetChange());
 }
 
 bool UHasardBankrollComponent::TryStake(int32 Amount)
@@ -26,7 +41,7 @@ bool UHasardBankrollComponent::TryStake(int32 Amount)
 	}
 
 	Balance -= Amount;
-	TotalStaked += Amount;
+	SessionStaked += Amount;
 
 	OnBankrollChanged.Broadcast(Balance, -Amount, GetSessionNetChange());
 	return true;
@@ -40,7 +55,7 @@ void UHasardBankrollComponent::CreditWinnings(int32 Amount)
 	}
 
 	Balance  += Amount;
-	TotalWon += Amount;
+	SessionWon += Amount;
 
 	OnBankrollChanged.Broadcast(Balance, Amount, GetSessionNetChange());
 }

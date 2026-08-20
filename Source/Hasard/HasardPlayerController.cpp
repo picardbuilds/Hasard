@@ -5,12 +5,14 @@
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "InputMappingContext.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "HasardBankrollComponent.h"
 #include "HasardGameMode.h"
 #include "HasardPayoutTable.h"
 #include "HasardHUDWidget.h"
 #include "HasardPlayerState.h"
+#include "HasardSaveGame.h"
 #include "HasardTypes.h"
 
 void AHasardPlayerController::BeginPlay()
@@ -25,6 +27,8 @@ void AHasardPlayerController::BeginPlay()
 			HUDWidget->AddToViewport();
 			HUDWidget->OnRealityCheckDismissed.AddUObject(
 				this, &AHasardPlayerController::HandleRealityCheckDismissed);
+			HUDWidget->OnSessionStartChosen.AddUObject(
+				this, &AHasardPlayerController::HandleSessionStartChosen);
 		}
 	}
 
@@ -45,6 +49,11 @@ void AHasardPlayerController::BeginPlay()
 			HUDWidget->SetHouseEdgeUnknown();
 		}
 	}
+
+	// Before the player state is looked up, so a misconfigured Player State Class leaves
+	// the player looking at a start screen rather than at a table that silently does not
+	// keep score. The warnings below still say what is wrong.
+	ShowStartScreen();
 
 	AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>();
 	if (!PS)
@@ -67,8 +76,11 @@ void AHasardPlayerController::BeginPlay()
 	if (HUDWidget)
 	{
 		HUDWidget->SetBankroll(BoundBankroll->GetBalance(),
-			BoundBankroll->GetTotalStaked(),
+			BoundBankroll->GetSessionStaked(),
 			BoundBankroll->GetSessionNetChange());
+
+		HUDWidget->SetLifetime(BoundBankroll->GetLifetimeStaked(),
+			BoundBankroll->GetLifetimeNetChange());
 	}
 
 	GetWorldTimerManager().SetTimer(ClockTimerHandle, this,
@@ -82,6 +94,7 @@ void AHasardPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (HUDWidget)
 	{
 		HUDWidget->OnRealityCheckDismissed.RemoveAll(this);
+		HUDWidget->OnSessionStartChosen.RemoveAll(this);
 	}
 
 	if (BoundBankroll)
@@ -94,6 +107,83 @@ void AHasardPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void AHasardPlayerController::ShowStartScreen()
+{
+	if (!HUDWidget)
+	{
+		return;
+	}
+
+	LoadedSave = Cast<UHasardSaveGame>(UGameplayStatics::LoadGameFromSlot(
+		UHasardSaveGame::SlotName, UHasardSaveGame::UserIndex));
+
+	if (LoadedSave && LoadedSave->Version != UHasardSaveGame::CurrentVersion)
+	{
+		// Refused rather than migrated. A field whose meaning changed would make
+		// LifetimeStaked a number about something else, and no guess is honest.
+		UE_LOG(LogHasard, Warning,
+			TEXT("Save is a version of %d, this build reads %d - ignoring it"),
+			LoadedSave->Version, UHasardSaveGame::CurrentVersion);
+
+		LoadedSave = nullptr;
+	}
+
+	if (StartScreenContext)
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = 
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(StartScreenContext, 20);
+		}
+	}
+
+	SetShowMouseCursor(true);
+	SetInputMode(FInputModeGameAndUI()
+		.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock)
+		.SetHideCursorDuringCapture(false));
+
+	HUDWidget->ShowStartScreen(LoadedSave != nullptr,
+		LoadedSave ? LoadedSave->Balance : 0,
+		LoadedSave ? LoadedSave->LifetimeStaked : 0,
+		LoadedSave ? LoadedSave->LifetimeWon - LoadedSave->LifetimeStaked : 0);
+
+}
+
+void AHasardPlayerController::HandleSessionStartChosen(bool bContinuePrevious)
+{
+	if (StartScreenContext)
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(StartScreenContext);
+		}
+	}
+
+	SetShowMouseCursor(false);
+	SetInputMode(FInputModeGameOnly());
+
+	if (HUDWidget)
+	{
+		HUDWidget->HideStartScreen();
+	}
+
+	// No save is not an error. It is a first sitting, and the defaults already describe
+	// one - which is why there is no separate branch here for it.
+	if (LoadedSave && BoundBankroll)
+	{
+		BoundBankroll->ApplySave(*LoadedSave, bContinuePrevious);
+	}
+
+	if (AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>())
+	{
+		PS->StartSession(LoadedSave ? LoadedSave->LifetimeSeconds : 0.0f);
+	}
+
+	UE_LOG(LogHasard, Warning, TEXT("Sessions started -%s"),
+		bContinuePrevious ? TEXT("continuing the last one") : TEXT("new"));
+}
+
 void AHasardPlayerController::HandleBankrollChanged(int32 NewBalance, int32 Delta,
 	int32 SessionNetChange)
 {
@@ -102,7 +192,10 @@ void AHasardPlayerController::HandleBankrollChanged(int32 NewBalance, int32 Delt
 
 	if (HUDWidget && BoundBankroll)
 	{
-		HUDWidget->SetBankroll(NewBalance, BoundBankroll->GetTotalStaked(), SessionNetChange);
+		HUDWidget->SetBankroll(NewBalance, BoundBankroll->GetSessionStaked(), SessionNetChange);
+
+		HUDWidget->SetLifetime(BoundBankroll->GetLifetimeStaked(),
+			BoundBankroll->GetLifetimeNetChange());
 	}
 }
 
@@ -161,7 +254,7 @@ void AHasardPlayerController::HandleRealityCheck(int32 MinutesElapsed)
 		.SetHideCursorDuringCapture(false));
 
 	HUDWidget->ShowRealityCheck(MinutesElapsed,
-		BoundBankroll->GetTotalStaked(),
+		BoundBankroll->GetSessionStaked(),
 		BoundBankroll->GetSessionNetChange());
 }
 

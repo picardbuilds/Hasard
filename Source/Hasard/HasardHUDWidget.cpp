@@ -3,16 +3,24 @@
 #include "HasardHUDWidget.h"
 #include "Components/TextBlock.h"
 
-void UHasardHUDWidget::SetBankroll(int32 Balance, int32 TotalStaked, int32 SessionNetChange)
+void UHasardHUDWidget::SetBankroll(int32 Balance, int32 SessionStaked, int32 SessionNetChange)
 {
 	// No null checks. BindWidget already made these compile-time guarantees, and a
 	// defensive check here would only hide the Blueprint error you want to see.
 	BalanceText->SetText(FText::AsNumber(Balance));
-	StakedText->SetText(FText::AsNumber(TotalStaked));
+	StakedText->SetText(FText::AsNumber(SessionStaked));
 
 	// Signed, always. "%+d" prints -60 as -60 and 40 as +40, so a losing session
 	// can never read as a balance that merely happens to be smaller.
 	NetText->SetText(FText::FromString(FString::Printf(TEXT("%+d"), SessionNetChange)));
+}
+
+void UHasardHUDWidget::SetLifetime(int32 LifetimeStaked, int32 LifetimeNetChange)
+{
+	LifetimeText->SetText(FText::Format(
+		NSLOCTEXT("Hasard", "LifetimeFmt", "All sessions: staked {0}, net {1}"),
+		FText::AsNumber(LifetimeStaked),
+		FText::FromString(FString::Printf(TEXT("%+d"), LifetimeNetChange))));
 }
 
 void UHasardHUDWidget::SetSessionTime(float ElapsedSeconds)
@@ -59,4 +67,9 @@ void UHasardHUDWidget::ClearBetPreview()
 void UHasardHUDWidget::NotifyRealityCheckDismissed()
 {
 	OnRealityCheckDismissed.Broadcast();
+}
+
+void UHasardHUDWidget::NotifySessionStartChosen(bool bContinuePrevious)
+{
+	OnSessionStartChosen.Broadcast(bContinuePrevious);
 }

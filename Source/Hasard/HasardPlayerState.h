@@ -17,9 +17,23 @@ class HASARD_API AHasardPlayerState : public APlayerState
 public:
 	AHasardPlayerState();
 
+	/**
+	 * Starts the clock and the reality check. Called once the player has chosen how this
+	 * sitting begins, never from BeginPlay.
+	 *
+	 * InPriorSeconds is what previous sittings already cost, carried in from the save so
+	 * the lifetime figure can be reported without the session clock ever being wound
+	 * forward - those are two different claims and only one of them is about right now.
+	 */
+	void StartSession(float InPriorSeconds);
+
 	/** Real seconds elapsed this session. Unaffected by pause or time dilation. */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Session")
 	float GetSessionElapsedSeconds() const;
+
+	/** Every sitting including this one. What the save records. */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Session")
+	float GetLifeTimeSeconds() const { return PriorSeconds + GetSessionElapsedSeconds(); }
 
 protected:
 	virtual void BeginPlay() override;
@@ -38,6 +52,9 @@ private:
 
 	/** Wall clock at session start. Deliberately not world time - Module 4. */
 	double SessionStartRealTime = 0.0;
+
+	/** Seconds carried in from the save. Read only for the lifetime figure. */
+	float PriorSeconds = 0.0f;
 
 	/** Plain struct, not a UObject: nothing for the collector to track. */
 	FTimerHandle SessionTimerHandle;

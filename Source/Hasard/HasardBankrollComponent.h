@@ -6,6 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "HasardBankrollComponent.generated.h"
 
+class UHasardSaveGame;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnBankrollChanged,
 	int32, NewBalance, int32, Delta, int32, SessionNetChange);
 
@@ -28,14 +30,39 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Bankroll")
 	void CreditWinnings(int32 Amount);
 
+	/**
+	 * Restores the record, and the balance only if the player chose to continue.
+	 *
+	 * The two lines below are the whole of the new-session decision, and the asymmetry is
+	 * the point: the lifetime figures are read unconditionally, so no choice on the start
+	 * screen can make what the player has already spent look smaller.
+	 */
+	void ApplySave(const UHasardSaveGame& Save, bool bContinuePrevious);
+
 	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
 	int32 GetBalance() const { return Balance; }
 	
+	/** This sitting only. The HUD shows it beside the lifetime figure, never instead of it. */
 	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
-	int32 GetTotalStaked() const { return TotalStaked; }
+	int32 GetSessionStaked() const { return SessionStaked; }
 
 	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
-	int32 GetSessionNetChange() const { return TotalWon - TotalStaked; }
+	int32 GetSessionNetChange() const { return SessionWon - SessionStaked; }
+
+	/**
+	 * Prior sittings plus this one, computed rather than stored.
+	 *
+	 * A third pair of counters kept in step with these would be the same fact in two
+	 * places, and the day they disagreed the smaller pair would be the one on screen.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
+	int32 GetLifetimeStaked() const { return PriorStaked + SessionStaked; }
+
+	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
+	int32 GetLifetimeWon() const { return PriorWon + SessionWon; }
+
+	UFUNCTION(BlueprintPure, Category = "Hasard|Bankroll")
+	int32 GetLifetimeNetChange() const { return GetLifetimeWon() - GetLifetimeStaked(); }
 
 protected:
 	virtual void BeginPlay() override;
@@ -47,9 +74,15 @@ protected:
 	int32 Balance = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
-	int32 TotalStaked = 0;
+	int32 SessionStaked = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
-	int32 TotalWon = 0;
-		
+	int32 SessionWon = 0;
+
+	/** Carried in from the save and never written by play. Only ApplySave sets these. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
+	int32 PriorStaked = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hasard|Bankroll")
+	int32 PriorWon = 0;
 };

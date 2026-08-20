@@ -15,6 +15,11 @@ AHasardPlayerState::AHasardPlayerState()
 void AHasardPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void AHasardPlayerState::StartSession(float InPriorSeconds)
+{
+	PriorSeconds = InPriorSeconds;
 
 	SessionStartRealTime = FPlatformTime::Seconds();
 
@@ -31,6 +36,13 @@ void AHasardPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 float AHasardPlayerState::GetSessionElapsedSeconds() const
 {
+	// Before StartSession the stamp is still zero, and FPlatformTime::Seconds() is offset
+	// past 2^24 on Windows - so without this the HUD would open on about 194 days played.
+	if (SessionStartRealTime == 0.0)
+	{
+		return 0.0f;
+	}
+
 	return static_cast<float>(FPlatformTime::Seconds() - SessionStartRealTime);
 }
 

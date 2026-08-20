@@ -115,6 +115,17 @@ to reach for once a problem appears.
 | `ue5-code-review` | Epic's official C++ coding standard and engine-usage conventions, targeted at UE 5.8. Naming, formatting, const, encapsulation, `UPROPERTY`/`UFUNCTION`, GC and lifetimes, actor lifecycle, gameplay-framework ownership, Enhanced Input, and what dates a UE4-era tutorial. |
 | `ue5-guide-authoring` | The `guide-N-*.html` course format and its rules: a complete file at every Build step, every editor action spelled out, each module ending in something observable, quiz answers distributed across all four positions. |
 
+**The names vary by account, and both names mean the same skill.** This is a Teams
+account and the synced skill set is not identical across the logins: the review skill may
+resolve as `ue5-code-review` or as `hasard-code-review`, and the authoring skill as
+`ue5-guide-authoring` or as `hasard-guide-authoring`. Elsewhere in this file either name
+may appear - they are aliases, not two different skills, and neither spelling is wrong.
+
+So: **load both pairs by preference. If only one name in a pair resolves, load that one and
+carry on** - do not stop to ask which is correct, and do not treat a missing alias as a
+missing skill. If *neither* name in a pair resolves, say so before writing C++ or guide
+prose rather than proceeding as though the standard had been read.
+
 **Why up front rather than on request.** Both skills are preventive. `ue5-code-review`
 is meant to be read *before* C++ is written here, so it complies on the first pass -
 loading it when a review is finally requested means the violations already exist and the
