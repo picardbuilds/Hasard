@@ -35,6 +35,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hasard|Session")
 	float GetLifeTimeSeconds() const { return PriorSeconds + GetSessionElapsedSeconds(); }
 
+	/**
+	 * True once StartSession has stamped the clock.
+	 *
+	 * Reads the stamp rather than keeping a bool beside it. Module 9 declined that bool
+	 * for the guard inside GetSessionElapsedSeconds, and the reason is unchanged: the
+	 * stamp already answers this question, and two answers can disagree.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Session")
+	bool IsSessionStarted() const { return SessionStartRealTime != 0.0; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

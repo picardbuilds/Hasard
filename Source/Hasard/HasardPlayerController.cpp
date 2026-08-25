@@ -89,6 +89,11 @@ void AHasardPlayerController::BeginPlay()
 
 void AHasardPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// First line of the function, and it has to be. Everything below releases something
+	// CommitSave reads - the bankroll pointer is nulled twenty lines down - so a commit
+	// placed at the end of this function would find nothing and refuse, silently.
+	CommitSave();
+
 	GetWorldTimerManager().ClearTimer(ClockTimerHandle);
 
 	if (HUDWidget)
@@ -126,6 +131,21 @@ void AHasardPlayerController::ShowStartScreen()
 			LoadedSave->Version, UHasardSaveGame::CurrentVersion);
 
 		LoadedSave = nullptr;
+	}
+
+	// Said out loud on every launch, because until now the read path had nothing to read
+	// and no way to tell you so. The figures here are the ones the start screen is about
+	// to show, from the same object, so the two cannot disagree.
+	if (LoadedSave)
+	{
+		UE_LOG(LogHasard, Warning,
+			TEXT("Save read: session %d, staked %d, seconds %.0f, balance %d"),
+			LoadedSave->SessionsPlayed, LoadedSave->LifetimeStaked,
+			LoadedSave->LifetimeSeconds, LoadedSave->Balance);
+	}
+	else
+	{
+		UE_LOG(LogHasard, Warning, TEXT("No usable save - this is first sitting"));
 	}
 
 	if (StartScreenContext)
@@ -182,6 +202,11 @@ void AHasardPlayerController::HandleSessionStartChosen(bool bContinuePrevious)
 
 	UE_LOG(LogHasard, Warning, TEXT("Sessions started -%s"),
 		bContinuePrevious ? TEXT("continuing the last one") : TEXT("new"));
+
+	// After StartSession, never before it: CommitSave refuses to write until the clock
+	// has been stamped, so the order of these two lines is the difference between the
+	// sitting being counted and the sitting being lost.
+	CommitSave();
 }
 
 void AHasardPlayerController::HandleBankrollChanged(int32 NewBalance, int32 Delta,
@@ -197,6 +222,11 @@ void AHasardPlayerController::HandleBankrollChanged(int32 NewBalance, int32 Delt
 		HUDWidget->SetLifetime(BoundBankroll->GetLifetimeStaked(),
 			BoundBankroll->GetLifetimeNetChange());
 	}
+
+	// Every stake and every credit. The record is never more than one money movement
+	// behind what the HUD is showing, which is the only relationship between them worth
+	// guaranteeing.
+	CommitSave();
 }
 
 void AHasardPlayerController::UpdateSessionTime()
@@ -210,6 +240,53 @@ void AHasardPlayerController::UpdateSessionTime()
 	if (const AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>())
 	{
 		HUDWidget->SetSessionTime(PS->GetSessionElapsedSeconds());
+	}
+}
+
+void AHasardPlayerController::CommitSave()
+{
+	const AHasardPlayerState* PS = GetPlayerState<AHasardPlayerState>();
+
+	// Nothing is written before the player has chosen. Until that choice the bankroll
+	// holds StartingBalance rather than the record, so a write here would replace a real
+	// saved balance with 500 for somebody who opened the game and read the start screen.
+	if (!PS || !PS->IsSessionStarted())
+	{
+		return;
+	}
+
+	if (!BoundBankroll)
+	{
+		// Refused rather than written short. A stale record is merely old; a record with
+		// a zero in it is a false statement about what playing cost.
+		UE_LOG(LogHasard, Error, TEXT("CommitSave: no bankroll - nothing written"));
+		return;
+	}
+
+	UHasardSaveGame* Save = Cast<UHasardSaveGame>(
+		UGameplayStatics::CreateSaveGameObject(UHasardSaveGame::StaticClass()));
+
+	if (!Save)
+	{
+		UE_LOG(LogHasard, Error, TEXT("CommitSave: could not create the save object"));
+		return;
+	}
+
+	Save->Version         = UHasardSaveGame::CurrentVersion;
+	Save->Balance         = BoundBankroll->GetBalance();
+	Save->LifetimeStaked  = BoundBankroll->GetLifetimeStaked();
+	Save->LifetimeWon     = BoundBankroll->GetLifetimeWon();
+	Save->LifetimeSeconds = PS->GetLifeTimeSeconds();
+
+	// Counted from what was read, not from what was last written, so the value is stable
+	// however many times this function runs in one sitting. A sitting the player started
+	// fresh is still a sitting, so nothing here ever counts down.
+	Save->SessionsPlayed = (LoadedSave ? LoadedSave->SessionsPlayed : 0) + 1;
+
+	if (!UGameplayStatics::SaveGameToSlot(Save, UHasardSaveGame::SlotName,
+		UHasardSaveGame::UserIndex))
+	{
+		UE_LOG(LogHasard, Error, TEXT("CommitSave: SaveGameToSlot refused to write"));
 	}
 }
 
@@ -231,6 +308,11 @@ void AHasardPlayerController::ClearBetPreview()
 
 void AHasardPlayerController::HandleRealityCheck(int32 MinutesElapsed)
 {
+	// First, and above the guard below. The clock advances whether or not the money does,
+	// and whether or not the widget exists - so the one call site that commits elapsed
+	// time must not be behind a check for a HUD.
+	CommitSave();
+
 	if (!HUDWidget || !BoundBankroll)
 	{
 		return;

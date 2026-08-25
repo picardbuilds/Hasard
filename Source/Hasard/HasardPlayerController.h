@@ -52,6 +52,15 @@ private:
 	/** Repeating timer callback. One update a second, because that is the resolution shown. */
 	void UpdateSessionTime();
 
+	/**
+	 * Writes the record to the slot.
+	 *
+	 * Cheap and safe to call often - four places do. It refuses rather than writing a
+	 * record with a hole in it, and it writes nothing at all before the player has
+	 * chosen how the sitting begins.
+	 */
+	void CommitSave();
+
 	/** Cached so EndPlay unbinds from the same object BeginPlay bound to. */
 	UPROPERTY()
 	TObjectPtr<UHasardBankrollComponent> BoundBankroll;
