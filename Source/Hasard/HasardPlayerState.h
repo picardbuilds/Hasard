@@ -55,10 +55,18 @@ private:
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHasardBankrollComponent> BankrollComp;
 
-	/** How often the reality check interrupts. 15s for observation; 300s once the UI exists. */
+	/**
+	 * How often the reality check interrupts.
+	 *
+	 * Five minutes. The 15 the value carried until now was for watching the mechanic
+	 * work while it was being built, and the comment beside it always said so; the UI it
+	 * was waiting for arrived in module 9. Lower it deliberately for a short demo if you
+	 * want to show the check firing - that is honest. Shipping 15 as though it were a
+	 * considered interval is not.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Session",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0", UIMin = "15.0", UIMax = "600.0"))
-	float RealityCheckIntervalSeconds = 15.0f;
+	float RealityCheckIntervalSeconds = 300.0f;
 
 	/** Wall clock at session start. Deliberately not world time - Module 4. */
 	double SessionStartRealTime = 0.0;
