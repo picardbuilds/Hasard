@@ -27,3 +27,8 @@ UpgradeLog.htm
 # OS
 .DS_Store
 Thumbs.db
+
+# Working notes — on disk, not in the repo
+/CLAUDE.md
+/docs/leftover.md
+/docs/toUpdate.md
