@@ -1,9 +1,12 @@
 // Copyright Picardbuilds. All Rights Reserved.
 
 #include "HasardWheel.h"
+#include "HasardGameMode.h"
+#include "HasardTableLayout.h"
 #include "HasardTypes.h"
-#include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -54,6 +57,7 @@ void AHasardWheel::BeginPlay()
 	UE_LOG(LogHasard, Warning, TEXT("Wheel: BeginPlay"));
 
 	AuditPocketSequence();
+	BuildNumerals();
 }
 
 void AHasardWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -118,6 +122,22 @@ bool AHasardWheel::TryGetPocketAngleDegrees(int32 Number, float& OutDegrees) con
 	return true;
 }
 
+bool AHasardWheel::TryGetPocketYaw(int32 Number, float& OutYaw) const
+{
+	float Degrees = 0.0f;
+
+	if (!TryGetPocketAngleDegrees(Number, Degrees))
+	{
+		OutYaw = 0.0f;
+		return false;
+	}
+
+	// The one negation in the project. Everything that places something on the rim, and
+	// everything that reads something off it, goes through this function.
+	OutYaw = -Degrees;
+	return true;
+}
+
 void AHasardWheel::AuditPocketSequence() const
 {
 	const TArray<int32>& Sequence = GetPocketSequence();
@@ -155,4 +175,86 @@ void AHasardWheel::AuditPocketSequence() const
 	UE_LOG(LogHasard, Warning,
 		TEXT("Rim audit: %d pockets, %d distinct, %d offenders, %.4f degrees each"),
 		Count, Seen.Num(), Offenders, 360.0f / static_cast<float>(Count));
+}
+
+FColor AHasardWheel::NumeralColorFor(int32 Number, const UHasardTableLayout* Layout) const
+{
+	// Zero first. It is not in the red set, so asking IsRedNumber first would print it in
+	// the black ink - the same ordering trap the felt met in guide 3 module 4.
+	if (Number == 0)
+	{
+		return ZeroNumeralColor;
+	}
+
+	return (Layout && Layout->IsRedNumber(Number)) ? RedNumeralColor : BlackNumeralColor;
+}
+
+void AHasardWheel::BuildNumerals()
+{
+	// Destroy first and unconditionally, before the bShowNumerals test. Turning numerals
+	// off and rebuilding has to remove them, not leave the previous set standing.
+	for (const TObjectPtr<UTextRenderComponent>& Existing : Numerals)
+	{
+		if (Existing)
+		{
+			Existing->DestroyComponent();
+		}
+	}
+
+	Numerals.Reset();
+
+	if (!bShowNumerals || !WheelMesh)
+	{
+		return;
+	}
+
+	// The felt already owns the red list, and the GameMode already owns the felt's layout
+	// asset. Asking for it here rather than adding a second assignment to BP_WHEEL keeps
+	// the eighteen red numbers in exactly one place - which is the whole reason that list
+	// is a list.
+	const AHasardGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AHasardGameMode>() : nullptr;
+	const UHasardTableLayout* Layout = GM ? GM->GetTableLayout() : nullptr;
+
+	if (!Layout)
+	{
+		UE_LOG(LogHasard, Error,
+			TEXT("Wheel: no table layout on BP_HasardGameMode - numerals cannot be coloured"));
+	}
+
+	const TArray<int32>& Sequence = GetPocketSequence();
+
+	for (const int32 Number : Sequence)
+	{
+		float Yaw = 0.0f;
+		if (!TryGetPocketYaw(Number, Yaw))
+		{
+			continue;
+		}
+
+		UTextRenderComponent* Numeral = NewObject<UTextRenderComponent>(this);
+
+		// Movable before registering. A component made with NewObject is static, and
+		// moving a registered static component warns and is then ignored.
+		Numeral->SetMobility(EComponentMobility::Movable);
+		Numeral->RegisterComponent();
+
+		// Attached to the rim rather than to the root, so that turning the rim turns the
+		// numbers with it. Module 3 rotates exactly one component because of this line.
+		Numeral->AttachToComponent(WheelMesh, FAttachmentTransformRules::KeepRelativeTransform);
+
+		const FRotator Facing(0.0f, Yaw, 0.0f);
+		Numeral->SetRelativeLocation(
+			Facing.RotateVector(FVector(NumeralRadius, 0.0f, NumeralZOffset)));
+		Numeral->SetRelativeRotation(
+			FRotator(NumeralRotation.Pitch, NumeralRotation.Yaw + Yaw, NumeralRotation.Roll));
+		Numeral->SetText(FText::AsNumber(Number));
+		Numeral->SetWorldSize(NumeralTextSize);
+		Numeral->SetHorizontalAlignment(EHTA_Center);
+		Numeral->SetVerticalAlignment(EVRTA_TextCenter);
+		Numeral->SetTextRenderColor(NumeralColorFor(Number, Layout));
+		
+		Numerals.Add(Numeral);
+	}
+
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: printed %d numerals"), Numerals.Num());
 }
