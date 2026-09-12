@@ -67,6 +67,18 @@ void AHasardGameMode::BeginPlay()
 		UE_LOG(LogHasard, Error,
 			TEXT("Payout audit: the rows do not share one edge. A row is wrong."));
 	}
+
+	// Two objects hold a pocket count. The wheel is the physical rim; the payout table is
+	// what the edge was priced against. They are genuinely separate facts - pointing the
+	// GameMode at an American table is a thing a designer may legitimately do - so they
+	// are allowed to differ. They are not allowed to differ *silently*, because the figure
+	// on the HUD is computed from one of them and paid out against the other.
+	if (BoundWheel && BoundWheel->GetPocketCount() != PayoutTable->PocketCount)
+	{
+		UE_LOG(LogHasard, Error,
+			TEXT("Pocket missmatch: the wheel has %d pockets, the payout table is priced for %d"),
+			BoundWheel->GetPocketCount(), PayoutTable->PocketCount);
+	}
 }
 
 void AHasardGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -306,4 +318,39 @@ void AHasardGameMode::HasardAuditLayout()
 
 	UE_LOG(LogHasard, Display, TEXT("%d of them are printed boxes, %d failing the box check"),
 		Boxes, BoxOffenders);
+}
+
+void AHasardGameMode::HasardShowPocket(int32 Number)
+{
+	AHasardWheel* Wheel = Cast<AHasardWheel>(
+		UGameplayStatics::GetActorOfClass(this, AHasardWheel::StaticClass()));
+
+	if (!Wheel)
+	{
+		UE_LOG(LogHasard, Error, TEXT("no wheel in level"));
+		return;
+	}
+
+	const int32 RimIndex = Wheel->GetRimIndexOf(Number);
+
+	if (RimIndex == INDEX_NONE)
+	{
+		UE_LOG(LogHasard, Error, TEXT("%d is not a pocket on this wheel"), Number);
+		return;
+	}
+
+	float Degrees = 0.0f;
+	Wheel->TryGetPocketAngleDegrees(Number, Degrees);
+
+	const int32 Count = Wheel->GetPocketCount();
+
+	// The two neighbours are printed because they are how you check this against a
+	// photograph of a real wheel - and because they are the two numbers a near-miss
+	// animation would want to linger on. Worth knowing their names early.
+	const int32 Before = Wheel->GetNumberAtRimIndex((RimIndex + Count - 1) % Count);
+	const int32 After = Wheel->GetNumberAtRimIndex((RimIndex + 1) % Count);
+
+	UE_LOG(LogHasard, Display,
+		TEXT("%d is rim slot %d at %.2f degrees, between %d and %d"),
+		Number, RimIndex, Degrees, Before, After);
 }

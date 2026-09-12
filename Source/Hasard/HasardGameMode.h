@@ -38,6 +38,10 @@ public:
 	UFUNCTION(Exec)
 	void HasardAuditLayout();
 
+	/** Console: HasardShowPocket 17 */
+	UFUNCTION(Exec)
+	void HasardShowPocket(int32 Number);
+
 	/** Settles one round against the payout table. */
 	UFUNCTION(BlueprintCallable, Category = "Hasard|Round")
 	void ResolveRound(int32 WinningPocket);
