@@ -730,7 +730,7 @@ grp:"Part III — Playing the Table",
 title:"Enhanced Input",
 lede:"Look around the table, click to place a bet, press a key to spin. UE5's input system — and a correction to Guide 1.",
 blocks:[
-{t:'warn',lab:'Correction to Guide 1',x:'<p>Guide 1 Module 3 showed <code>PlayerInputComponent-&gt;BindAxis("MoveForward", this, &amp;ARogueCharacter::MoveForward);</code>, taken from Looman\'s guide.</p><p>That is the <b>legacy input system</b>. It still functions in 5.8 but is deprecated and is not what templates or Epic\'s docs use. The <i>lesson</i> — the address operator, passing a function to be called later — is unchanged. Only the API moved. Enhanced Input uses the identical <code>&amp;Class::Function</code> shape.</p>'},
+{t:'warn',lab:'Correction to Guide 1',x:'<p>Guide 1 Module 3 showed the legacy binding shape, <code>PlayerInputComponent-&gt;BindAxis("MoveForward", this, &amp;AMyCharacter::MoveForward);</code>.</p><p>That is the <b>legacy input system</b>. It still functions in 5.8 but is deprecated and is not what templates or Epic\'s docs use. The <i>lesson</i> — the address operator, passing a function to be called later — is unchanged. Only the API moved. Enhanced Input uses the identical <code>&amp;Class::Function</code> shape.</p>'},
 
 {t:'h',x:'The three pieces'},
 {t:'table',head:['Asset / type','Role'],rows:[
