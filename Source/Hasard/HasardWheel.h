@@ -8,8 +8,11 @@
 #include "HasardWheel.generated.h"
 
 class UHasardTableLayout;
-class UStaticMeshComponent;
+class UInstancedStaticMeshComponent;
+class UMaterialInterface;
 class USceneComponent;
+class UStaticMesh;
+class UStaticMeshComponent;
 class UTextRenderComponent;
 
 /** One parameter means two entries after the name: the type, then the variable name. */
@@ -69,6 +72,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hasard|Wheel")
 	bool TryGetPocketYaw(int32 Number, float& OutYaw) const;
 
+	/**
+	 * The pocket a yaw points at - the inverse of TryGetPocketYaw.
+	 *
+	 * Used to read the landing back off the transforms rather than off the variable that
+	 * produced them, which is what makes the check in FinishSpin worth having.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Wheel")
+	int32 GetPocketAtYaw(float Yaw) const;
+
+	/** True from StartSpin until the ball settles. */
+	UFUNCTION(BlueprintPure, Category = "Hasard|Wheel")
+	bool IsSpinning() const { return bIsSpinning;  }
+
 	/** One spin, no animation. Public so the test and real play share one code path. */
 	int32 DetermineWinningPocket() const;
 
@@ -76,22 +92,63 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 private:
-	/** Timer callback. Nothing outside the wheel finishes a spin. */
+	/** Ends the spin and broadcasts. Nothing outside the wheel finishes a spin. */
 	void FinishSpin();
+
+	/** Places the rim and the ball for one point on the eased curve, 0 to 1. */
+	void ApplySpin(float Eased);
 
 	/** Walks the sequence on BeginPlay and says out loud whether it is still a wheel. */
 	void AuditPocketSequence() const;
 
-	/** Destroys any numerals and prints a fresh set from the rim sequence. */
+	/**
+	 * Prints the thirty-seven coloured plates.
+	 *
+	 * Called from OnConstruction as well as BeginPlay, and it has to be, for the reason
+	 * AHasardFelt::BuildSurface records: an instanced component builds its render state
+	 * when it registers, and one registered without a mesh never picks up a mesh assigned
+	 * afterwards - the value is stored and the renderer keeps drawing the default.
+	 */
+	void BuildPockets();
+
+	/**
+	 * Destroys any numerals and prints a fresh set from the rim sequence.
+	 *
+	 * BeginPlay only, matching AHasardFelt::BuildLabels. These are a component each rather
+	 * than instances, and OnConstruction runs on every property edit in the editor.
+	 */
 	void BuildNumerals();
 
-	/** Red, black, or green for zero. The felt owns the red list; this reads it. */
-	FColor NumeralColorFor(int32 Number, const UHasardTableLayout* Layout) const;
+	/** Points a component at PocketMesh and PocketMaterial and tints it. */
+	void PreparePockets(UInstancedStaticMeshComponent* Component, const FColor& Color) const;
+
+
+	/**
+	 * Which instanced component prints this pocket, which is the same question as what
+	 * colour it is: the components are split by colour, so routing and colouring cannot
+	 * disagree. The felt owns the red list; this reads it.
+	 */
+	UInstancedStaticMeshComponent* PocketsFor(int32 Number,
+		const UHasardTableLayout* Layout) const;
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
 	TObjectPtr<USceneComponent> WheelRoot;
+
+	/**
+	 * The turning part of the wheel, and the parent of everything printed on it.
+	 *
+	 * It exists to carry no scale. A parent's scale is applied to a child component
+	 * axis by axis in the child's own frame, without being rotated into it, so a rim
+	 * mesh flattened to (2, 2, 0.2) squashes a numeral's glyph height by 0.2 while
+	 * stretching its width by 2. Hanging the rim's contents off an unscaled node and
+	 * letting only WheelMesh carry the flattening removes the whole class of problem.
+	 */
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
+	TObjectPtr<USceneComponent> RimRoot;
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
 	TObjectPtr<UStaticMeshComponent> WheelMesh;
@@ -99,19 +156,84 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Wheel")
 	TObjectPtr<UStaticMeshComponent> BallMesh;
 
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Pocket")
+	TObjectPtr<UInstancedStaticMeshComponent> RedPockets;
+
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Pocket")
+	TObjectPtr<UInstancedStaticMeshComponent> BlackPockets;
+
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Pocket")
+	TObjectPtr<UInstancedStaticMeshComponent> ZeroPocket;
+
 	/** Every numeral this actor made. UPROPERTY so the collector can see them. */
 	UPROPERTY()
 	TArray<TObjectPtr<UTextRenderComponent>> Numerals;
+
+	/**
+	 * The same asset BP_Felt holds, assigned again here.
+	 *
+	 * Module 2 read it off the GameMode to avoid a second slot. That worked while the only
+	 * thing it fed was BeginPlay. The plates are printed from OnConstruction, where there
+	 * is no GameMode at all, so the wheel needs the asset in its own hand. This is not a
+	 * second copy of the red list - that list lives once, in UHasardTableLayout.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHasardTableLayout> TableLayout;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Wheel",
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
 	float SpinDuration = 6.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	bool bShowPockets = true;
+
+	/** A unit quad in centimetres. The same mesh BP_Felt prints its boxes from. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UStaticMesh> PocketMesh;
+
+	/** Needs a vector parameter named by ColorParameterName. The felt's material has one. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMaterialInterface> PocketMaterial;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	FName ColorParameterName = TEXT("Color");
+
+	/** Distance from the hub to the middle of a plate, in centimetres. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float PocketRadius = 45.0f;
+
+	/** How far a plate reaches in and out from that radius. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float PocketLength = 20.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	float PocketZOffset = 0.4f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	FColor RedPocketColor = FColor(178, 26, 30);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	FColor BlackPocketColor = FColor(22, 22, 24);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Pockets",
+		meta = (AllowPrivateAccess = "true"))
+	FColor ZeroPocketColor = FColor(20, 130, 60);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
 		meta = (AllowPrivateAccess = "true"))
 	bool bShowNumerals = true;
 
-	/** Distance from the hub to the middle of a numeral, in centimetres. */
+	/** Distance from the hub to the middle of a numeral. Sits on the plate, so match it. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
 		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
 	float NumeralRadius = 45.0f;
@@ -120,10 +242,10 @@ private:
 		meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
 	float NumeralTextSize = 6.0f;
 
-	/** Lifted off the rim so the numerals are not co-planar with whatever is under them. */
+	/** Must stay above PocketZOffset, or the numerals sink into their own plates. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
 		meta = (AllowPrivateAccess = "true"))
-	float NumeralZOffset = 0.5f;
+	float NumeralZOffset = 0.8f;
 
 	/**
 	 * Base orientation of a numeral before its own pocket yaw is added.
@@ -136,19 +258,49 @@ private:
 		meta = (AllowPrivateAccess = "true"))
 	FRotator NumeralRotation = FRotator(90.0f, 180.0f, 0.0f);
 
+	/**
+	 * One colour for all thirty-seven.
+	 *
+	 * A real wheel prints white on a coloured pocket, and so does this one now. The colour
+	 * of a number is a fact about the pocket, stated once, by the plate under it.
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
 		meta = (AllowPrivateAccess = "true"))
-	FColor RedNumeralColor = FColor(200, 32, 32);
+	FColor NumeralColor = FColor(245, 245, 240);
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
+	/** How far the rim turns over the whole spin. Presentation only. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Spin",
 		meta = (AllowPrivateAccess = "true"))
-	FColor BlackNumeralColor = FColor(24, 24, 24);
+	float WheelSweepDegrees = 1080.0f;
 
-	/** Zero is the house edge. It does not share a colour with anything else on the rim. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Numerals",
+	/** How far the ball travels over the whole spin, in the opposite sense to the rim. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Spin",
 		meta = (AllowPrivateAccess = "true"))
-	FColor ZeroNumeralColor = FColor(26, 132, 72);
+	float BallSweepDegrees = -2160.0f;
 
-	/** Plain struct, not a UObject: no UPROPERTY needed. */
-	FTimerHandle SpinTimerHandle;
+	/** Where the ball rides at the start of the spin. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Spin",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float BallOuterRadius = 58.0f;
+
+	/** Where the ball sits once it is in a pocket. Match this to PocketRadius. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Spin",
+		meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float BallPocketRadius = 45.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Spin",
+		meta = (AllowPrivateAccess = "true"))
+	float BallHeight = 2.0f;
+
+	/** The pocket this spin is travelling to. Decided in StartSpin, before a frame runs. */
+	int32 PendingPocket = INDEX_NONE;
+
+	bool bIsSpinning = false;
+
+	/** Seconds since StartSpin. The animation is a function of this and nothing else. */
+	float SpinElapsed = 0.0f;
+
+	/** Last applied angles, kept so FinishSpin can read the landing off the result. */
+	float WheelYaw = 0.0f;
+	float BallYaw = 0.0f;
 };
