@@ -7,6 +7,7 @@
 #include "HasardPlayerPawn.generated.h"
 
 class USceneComponent;
+class USkeletalMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UFloatingPawnMovement;
@@ -39,6 +40,14 @@ private:
 		meta = (AllowPrivateAccess = "true"))
 	float CameraDistance = 250.0f;
 
+	/** Which view the round starts in. The table has been filmed from behind since guide 2. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hasard|Camera",
+		meta = (AllowPrivateAccess = "true"))
+	bool bStartInThirdPerson = true;
+
+	/** Current view. Never assigned outside ToggleView, and never read except by ApplyViewMode. */
+	bool bThirdPerson = true;
+
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
 	TObjectPtr<USceneComponent> ViewRoot;
 
@@ -47,6 +56,17 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
 	TObjectPtr<UCameraComponent> TableCamera;
+
+	/**
+	 * The player, seen from behind.
+	 *
+	 * The mesh, its animation class and its transform are all set on this component in
+	 * BP_PlayerPawn rather than in code. There is no path to a content pack anywhere in
+	 * this file, which is deliberate: an asset path an agent cannot open is a guess, and
+	 * a guess that compiles is worse than one that does not.
+	 */
+	UPROPERTY(VisibleAnywhere, Category = "Hasard|Camera")
+	TObjectPtr<USkeletalMeshComponent> BodyMesh;
 
 	/**
 	 * Movement without a Character. A Character brings a capsule, gravity, crouching and
@@ -78,8 +98,22 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
 	TObjectPtr<UInputAction> SpinAction;
 
+	/** Digital. Lives in IMC_Table, so the pause menu and the reality check both suppress it. */
+	UPROPERTY(EditDefaultsOnly, Category = "Hasard|Input")
+	TObjectPtr<UInputAction> ToggleViewAction;
+
 	void Look(const FInputActionValue& Value);
 	void Move(const FInputActionValue& Value);
 	void PlaceBet();
 	void RequestSpin();
+	void ToggleView();
+
+	/**
+	 * Puts the camera and the body where bThirdPerson says they go.
+	 *
+	 * One function decides both, because they are one decision. Two places setting the
+	 * arm length and the visibility separately is how you end up looking at the inside
+	 * of your own head.
+	 */
+	void ApplyViewMode();
 };

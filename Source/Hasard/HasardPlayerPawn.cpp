@@ -3,6 +3,7 @@
 #include "HasardPlayerPawn.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "EnhancedInputComponent.h"
@@ -36,6 +37,15 @@ AHasardPlayerPawn::AHasardPlayerPawn()
 	TableCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TableCamera->bUsePawnControlRotation = false;
 
+	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
+	BodyMesh->SetupAttachment(ViewRoot);
+
+	// No collision on the body. The pawn is moved by FloatingPawnMovement, and a colliding
+	// mesh would both push the camera about and sit in front of every trace the interaction
+	// component fires - which would mean aiming at the felt and hitting your own arm.
+	BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BodyMesh->SetGenerateOverlapEvents(false);
+
 	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
 
 	// A walk, not a sprint. The defaults are 1200 uu/s, which crosses the whole felt in
@@ -54,16 +64,20 @@ void AHasardPlayerPawn::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	// HERE, not in the constructor: Blueprint overrides land afterwards.
-	if (CameraBoom)
-	{
-		CameraBoom->TargetArmLength = CameraDistance;
-	}
+	// HERE, not in the constructor: Blueprint overrides land afterwards. bStartInThirdPerson
+	// is one of them, which is why the view is applied from this function and not that one.
+	bThirdPerson = bStartInThirdPerson;
+	ApplyViewMode();
 }
 
 void AHasardPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Again here. OnConstruction gives the editor viewport the right picture; this is the
+	// one that decides what the player starts the round looking at.
+	bThirdPerson = bStartInThirdPerson;
+	ApplyViewMode();
 }
 
 void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -84,14 +98,41 @@ void AHasardPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EIC->BindAction(LookAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
-		EIC->BindAction(MoveAction,     ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Move);
-		EIC->BindAction(PlaceBetAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
-		EIC->BindAction(SpinAction,     ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
+		EIC->BindAction(LookAction,       ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Look);
+		EIC->BindAction(MoveAction,       ETriggerEvent::Triggered, this, &AHasardPlayerPawn::Move);
+		EIC->BindAction(PlaceBetAction,   ETriggerEvent::Started,   this, &AHasardPlayerPawn::PlaceBet);
+		EIC->BindAction(SpinAction,       ETriggerEvent::Started,   this, &AHasardPlayerPawn::RequestSpin);
+		EIC->BindAction(ToggleViewAction, ETriggerEvent::Started,   this, &AHasardPlayerPawn::ToggleView);
 	}
 	else
 	{
 		UE_LOG(LogHasard, Error, TEXT("Not on EnhancedInputComponent"));
+	}
+}
+
+void AHasardPlayerPawn::ToggleView()
+{
+	bThirdPerson = !bThirdPerson;
+	ApplyViewMode();
+
+	UE_LOG(LogHasard, Warning, TEXT("View: %s"),
+		bThirdPerson ? TEXT("third person") : TEXT("first person"));
+}
+
+void AHasardPlayerPawn::ApplyViewMode()
+{
+	if (CameraBoom)
+	{
+		// Zero puts the camera back at ViewRoot, which is where the head is. CameraDistance
+		// pulls it to where this table has been filmed from since guide 2.
+		CameraBoom->TargetArmLength = bThirdPerson ? CameraDistance : 0.0f;
+	}
+
+	if (BodyMesh)
+	{
+		// The whole body, not the head alone. At arm length zero the camera is inside the
+		// skull, and hiding one bone to fix that is a longer argument than it is worth.
+		BodyMesh->SetVisibility(bThirdPerson, true);
 	}
 }
 
