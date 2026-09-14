@@ -193,7 +193,7 @@ void AHasardWheel::FinishSpin()
 			TEXT("spin landed the ball on %d and is broadcasting %d"), Landed, WinningPocket);
 	}
 
-	UE_LOG(LogHasard, Warning, TEXT("Wheel: ball settled in pocked %d"), WinningPocket);
+	UE_LOG(LogHasard, Warning, TEXT("Wheel: ball settled in pocket %d"), WinningPocket);
 
 	OnBallSettled.Broadcast(WinningPocket);
 }
