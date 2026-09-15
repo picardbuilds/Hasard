@@ -3,6 +3,8 @@
 A single-zero roulette table written in C++ on Unreal Engine 5.8, whose subject is
 responsible-gaming design rather than roulette.
 
+**One-minute demo:** https://youtu.be/nbdHmSVrK30
+
 ---
 
 ## What this is
@@ -26,9 +28,9 @@ Built flat-screen first, with VR layered on afterwards — roughly 80% of the wo
 | | |
 |---|---|
 | Engine | Unreal Engine 5.8, C++ (Blueprints for wiring only) |
-| Source | 36 files under `Source/Hasard/` — wheel, felt, chips, bets, payouts, bankroll, save, HUD, pawn, controller, game mode |
+| Source | 33 C++ files under `Source/Hasard/` — wheel, felt, chips, bets, payouts, bankroll, save, HUD, pawn, controller, game mode |
 | Content | One map, 7 Blueprints, 3 data assets, 9 input assets, 3 materials, one HUD widget |
-| Table | 157 bet positions generated at runtime from 12 rules over a data asset |
+| Table | 157 bet positions generated at runtime from 15 bet-type rules over a data asset |
 | Wheel | 37 pockets in real physical rim order, a coloured plate and a numeral printed under each |
 | Round | Betting window → spin → settlement, with the result drawn at the start of the spin |
 | Persistence | One save slot; a record written on every money movement |
